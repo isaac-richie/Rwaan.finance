@@ -1,15 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAccount, useReadContracts } from "wagmi";
-import { formatUnits } from "viem";
-import { Check, Copy } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
+import { formatUnits, zeroAddress } from "viem";
+import {
+  ArrowLeft,
+  Check,
+  Copy,
+  Link2,
+  Network,
+  ShieldCheck,
+  Star,
+  Users,
+  Wallet,
+  Zap,
+} from "lucide-react";
+
 import { RWAN_V4_ABI, RWAN_V4_STAKING_ADDRESS } from "@/lib/contracts/rwanV4Abi";
+import { CountUp, Grain, Magnetic, Reveal, Spotlight } from "@/components/aurum-ui";
+import { AurumFooter } from "@/components/aurum-footer";
 import { buildReferralLink } from "@/lib/utils/referral";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(wei: bigint | undefined, decimals = 0): string {
+function fmt(wei: bigint | undefined, decimals = 2): string {
   if (wei === undefined) return "—";
   const n = parseFloat(formatUnits(wei, 18));
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
@@ -23,38 +39,18 @@ function short(addr: string): string {
 }
 
 const RANK_LABELS: Record<number, string> = {
-  1: "Rank 1", 2: "Rank 2", 3: "Rank 3", 4: "Rank 4",
-  5: "Rank 5", 6: "Rank 6", 7: "Rank 7", 8: "Rank 8",
-  9: "Rank 9", 10: "Rank 10", 11: "Rank 11 — Tricycle", 12: "Rank 12 — Jeep",
+  1: "Rank 1",  2: "Rank 2",  3: "Rank 3",  4: "Rank 4",
+  5: "Rank 5",  6: "Rank 6",  7: "Rank 7",  8: "Rank 8",
+  9: "Rank 9",  10: "Rank 10", 11: "Tricycle", 12: "Jeep",
 };
 
 const RANK_AWARDS: Record<number, string> = {
-  1: "$100", 2: "$150", 3: "$200", 4: "$300", 5: "$350",
-  6: "$400", 7: "$500", 8: "$700", 9: "$1,500",
+  1: "$100",  2: "$150",  3: "$200",  4: "$300",  5: "$350",
+  6: "$400",  7: "$500",  8: "$700",  9: "$1,500",
   10: "$2,500", 11: "$4,000", 12: "$8,000",
 };
 
-const RANK_TEAM_REQ: Record<number, bigint> = {
-  1:  100_000_000n * 10n ** 18n,
-  2:  150_000_000n * 10n ** 18n,
-  3:  200_000_000n * 10n ** 18n,
-  4:  250_000_000n * 10n ** 18n,
-  5:  300_000_000n * 10n ** 18n,
-  6:  400_000_000n * 10n ** 18n,
-  7:  500_000_000n * 10n ** 18n,
-  8:  700_000_000n * 10n ** 18n,
-  9:  900_000_000n * 10n ** 18n,
-  10: 1_000_000_000n * 10n ** 18n,
-  11: 2_000_000_000n * 10n ** 18n,
-  12: 3_000_000_000n * 10n ** 18n,
-};
-
-const RANK_MEMBER_REQ: Record<number, number> = {
-  1: 15, 2: 50, 3: 80, 4: 120, 5: 130,
-  6: 150, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0,
-};
-
-// ── types ────────────────────────────────────────────────────────────────────
+// ── types ─────────────────────────────────────────────────────────────────────
 
 interface L1Member {
   referee: string;
@@ -76,29 +72,47 @@ interface NetworkData {
   small_leg_count: number;
 }
 
-// ── component ────────────────────────────────────────────────────────────────
+// ── component ─────────────────────────────────────────────────────────────────
 
 export function NetworkDashboard() {
+  const { login: open } = usePrivy();
   const { address, isConnected } = useAccount();
   const [network, setNetwork] = useState<NetworkData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [networkLoading, setNetworkLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const addr = address?.toLowerCase();
   const staking = RWAN_V4_STAKING_ADDRESS;
   const referralLink = address ? buildReferralLink(address) : "";
 
-  const handleCopyLink = async () => {
+  // ── clipboard copy with textarea fallback ──────────────────────────────────
+  const handleCopyLink = () => {
     if (!referralLink) return;
-    try {
-      await navigator.clipboard.writeText(referralLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    const tryClipboard = () => {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        return navigator.clipboard.writeText(referralLink);
+      }
+      return Promise.reject(new Error("no clipboard api"));
+    };
+    const fallback = () => {
+      const ta = document.createElement("textarea");
+      ta.value = referralLink;
+      ta.style.cssText = "position:fixed;opacity:0;pointer-events:none";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    };
+    tryClipboard()
+      .catch(fallback)
+      .finally(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
   };
 
-  // on-chain reads
-  const { data } = useReadContracts({
+  // ── on-chain reads ─────────────────────────────────────────────────────────
+  const chainReads = useReadContracts({
     contracts: staking && address ? [
       { address: staking, abi: RWAN_V4_ABI, functionName: "totalUserStaked", args: [address] },
       { address: staking, abi: RWAN_V4_ABI, functionName: "teamStake",       args: [address] },
@@ -106,256 +120,410 @@ export function NetworkDashboard() {
       { address: staking, abi: RWAN_V4_ABI, functionName: "userRanks",       args: [address] },
       { address: staking, abi: RWAN_V4_ABI, functionName: "affiliateEarned", args: [address] },
     ] : [],
-    query: { enabled: !!staking && !!address },
+    query: { enabled: !!staking && !!address, refetchInterval: 30_000 },
   });
 
-  const personalStake = data?.[0]?.result as bigint | undefined;
-  const teamStake     = data?.[1]?.result as bigint | undefined;
-  const uplineChain   = data?.[2]?.result as string | undefined;
-  const rankData      = data?.[3]?.result as readonly [number, bigint, bigint] | undefined;
-  const affEarned     = data?.[4]?.result as bigint | undefined;
+  // ── rank config reads — dynamic, straight from the contract ───────────────
+  const rankConfigsLengthRead = useReadContract({
+    address: staking ?? zeroAddress,
+    abi: RWAN_V4_ABI,
+    functionName: "rankConfigsLength",
+    query: { enabled: !!staking },
+  });
+  const rankCount = Number(rankConfigsLengthRead.data ?? 0);
 
-  const currentRank   = rankData ? Number(rankData[0]) : 0;
-  const nextRank      = currentRank < 12 ? currentRank + 1 : null;
-  const nextTeamReq   = nextRank ? RANK_TEAM_REQ[nextRank] : null;
-  const teamPct       = nextTeamReq && teamStake
+  const rankConfigsRead = useReadContracts({
+    contracts: Array.from({ length: rankCount }, (_, i) => ({
+      address: staking!,
+      abi: RWAN_V4_ABI,
+      functionName: "rankConfigs" as const,
+      args: [BigInt(i + 1)] as const,
+    })),
+    query: { enabled: !!staking && rankCount > 0 },
+  });
+
+  // Build map: rankId (1-indexed) → minTeamStake (bigint)
+  const rankTeamReq = useMemo<Map<number, bigint>>(() => {
+    const m = new Map<number, bigint>();
+    rankConfigsRead.data?.forEach((r, i) => {
+      const res = r.result as readonly [bigint, bigint, number, boolean] | undefined;
+      if (res && res[3]) m.set(i + 1, res[1]); // minTeamStake
+    });
+    return m;
+  }, [rankConfigsRead.data]);
+
+  const personalStake = chainReads.data?.[0]?.result as bigint | undefined;
+  const teamStake     = chainReads.data?.[1]?.result as bigint | undefined;
+  const uplineChain   = chainReads.data?.[2]?.result as string | undefined;
+  const rankData      = chainReads.data?.[3]?.result as readonly [number, bigint, bigint] | undefined;
+  const affEarned     = chainReads.data?.[4]?.result as bigint | undefined;
+
+  const currentRank = rankData ? Number(rankData[0]) : 0;
+  const nextRank    = currentRank < 12 ? currentRank + 1 : null;
+  const nextTeamReq = nextRank
+    ? (rankTeamReq.get(nextRank) ?? null)
+    : null;
+
+  const teamPct = nextTeamReq && teamStake
     ? Math.min(100, Number((teamStake * 100n) / nextTeamReq))
     : 0;
 
-  // API fetch
+  // ── Supabase network fetch ─────────────────────────────────────────────────
+  const addr = address?.toLowerCase();
   useEffect(() => {
     if (!addr) return;
-    setLoading(true);
+    setNetworkLoading(true);
     fetch(`/api/network?wallet=${addr}`)
       .then((r) => r.json())
       .then((d) => { if (!d.error) setNetwork(d); })
-      .finally(() => setLoading(false));
+      .finally(() => setNetworkLoading(false));
   }, [addr]);
 
-  if (!isConnected) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 gap-3">
-        <span className="text-4xl">🔗</span>
-        <p className="text-sm text-muted-foreground">Connect your wallet to see your network</p>
-      </div>
-    );
-  }
+  const uplineDisplay =
+    uplineChain && uplineChain !== "0x0000000000000000000000000000000000000000"
+      ? short(uplineChain)
+      : network?.upline
+        ? short(network.upline)
+        : null;
 
+  // ── render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 px-4 py-6 max-w-4xl mx-auto">
+    <div className="ob-shell">
+      <Grain />
+      <Spotlight />
+      <div className="ob-atmo" aria-hidden="true" />
 
-      {/* ── Header ── */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Network</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your downline, team stake, and rank progress
-        </p>
+      {/* ── Nav ── */}
+      <div className="ob-topline">
+        <span className="ob-top-item">
+          <span className="ob-live" /> V4 live · BNB Chain
+        </span>
       </div>
-
-      {/* ── Referral link ── */}
-      <div className="rounded-xl border bg-card p-5 space-y-3">
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Your referral link</p>
-          <p className="text-xs text-muted-foreground">
-            Share it — anyone who stakes through this link joins your downline and pays you affiliate commissions on their stake.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            readOnly
-            value={referralLink}
-            onFocus={(e) => e.currentTarget.select()}
-            className="flex-1 min-w-0 rounded-lg border bg-muted/30 px-3 py-2 text-xs font-mono text-muted-foreground truncate"
-          />
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-black hover:bg-emerald-400 transition-colors"
-          >
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            {copied ? "Copied" : "Copy"}
+      <header className="ob-nav">
+        <Link href="/" className="ob-brand">
+          <img src="/logo-rwaan.png" alt="Rawli Analytics" className="ob-brand-mark" width={34} height={34} />
+          <span className="ob-brand-name">Rawli Analytics</span>
+        </Link>
+        <nav className="ob-nav-links" aria-label="Primary">
+          <Link href="/#stake">Plans</Link>
+          <Link href="/#position">Stake</Link>
+          <Link href="/#my-positions">Positions</Link>
+          <Link href="/network" aria-current="page">Network</Link>
+          <Link href="/#perks">Perks</Link>
+          <Link href="/#footer">Legal</Link>
+        </nav>
+        <Magnetic strength={0.25}>
+          <button type="button" className="ob-wallet" onClick={() => open()}>
+            <Wallet className="h-4 w-4" />
+            {address ? `${address.slice(0, 5)}…${address.slice(-4)}` : "Connect"}
           </button>
-        </div>
-      </div>
+        </Magnetic>
+      </header>
 
-      {/* ── Stats row ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: "My Stake",      value: fmt(personalStake, 2) + " RWAAN" },
-          { label: "Team Stake",    value: fmt(teamStake, 2) + " RWAAN" },
-          { label: "Referral Earned", value: fmt(affEarned, 2) + " RWAAN" },
-          { label: "Total Members", value: network ? String(network.total_members) : "—" },
-        ].map((s) => (
-          <div key={s.label} className="rounded-xl border bg-card p-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{s.label}</p>
-            <p className="text-lg font-bold font-mono">{s.value}</p>
+      <main>
+        {/* ── Page header ── */}
+        <section className="ob-section" style={{ paddingTop: "3rem" }}>
+          <div className="ob-section-head">
+            <Reveal>
+              <Link href="/" className="ob-back-link">
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to staking
+              </Link>
+            </Reveal>
+            <Reveal delay={0.04}>
+              <h1 className="ob-h2">Your <em>network.</em></h1>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <p>Downline depth, team stake, and rank progress — all live from the V4 contract.</p>
+            </Reveal>
           </div>
-        ))}
-      </div>
+        </section>
 
-      {/* ── Rank card ── */}
-      <div className="rounded-xl border bg-card p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Current Rank</p>
-            <p className="text-xl font-bold">
-              {currentRank === 0 ? "Unranked" : RANK_LABELS[currentRank]}
-            </p>
-            {currentRank > 0 && (
-              <p className="text-sm text-emerald-500 font-semibold">{RANK_AWARDS[currentRank]}/day</p>
-            )}
-          </div>
-          <div className="text-5xl">
-            {currentRank === 0 ? "🏁" : currentRank >= 11 ? "🪼" : "⭐"}
-          </div>
-        </div>
+        {!isConnected ? (
+          /* ── Not connected state ── */
+          <Reveal className="ob-pos-empty ob-pos-empty-net">
+            <Network className="h-5 w-5" />
+            <p>Connect your wallet to view your network stats, referral link, and rank progress.</p>
+            <Magnetic strength={0.25}>
+              <button type="button" className="ob-btn-gold" onClick={() => open()}>
+                <Wallet className="h-4 w-4" /> Connect wallet
+              </button>
+            </Magnetic>
+          </Reveal>
+        ) : (
+          <>
+            {/* ── Stats bento ── */}
+            <section className="ob-bento" aria-label="Network metrics">
+              <Reveal className="ob-card">
+                <div className="ob-card-head"><span className="ob-tag"><Wallet className="h-3.5 w-3.5" /> My Stake</span></div>
+                <div className="ob-card-metric">
+                  {personalStake != null
+                    ? <CountUp value={Number(formatUnits(personalStake, 18))} suffix=" RWAAN" decimals={0} />
+                    : "— RWAAN"}
+                </div>
+                <span className="ob-card-note">Your own active principal</span>
+              </Reveal>
 
-        {/* Progress to next rank */}
-        {nextRank && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Progress to {RANK_LABELS[nextRank]} ({RANK_AWARDS[nextRank]})</span>
-              <span>{teamPct.toFixed(1)}%</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
-                style={{ width: `${teamPct}%` }}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3 mt-2 text-xs">
-              <div className="rounded-lg bg-muted/50 p-3">
-                <p className="text-muted-foreground mb-1">Team Stake</p>
-                <p className="font-mono font-semibold">{fmt(teamStake)} / {fmt(nextTeamReq ?? 0n)}</p>
+              <Reveal className="ob-card" delay={0.07}>
+                <div className="ob-card-head"><span className="ob-tag"><Users className="h-3.5 w-3.5" /> Team Stake</span></div>
+                <div className="ob-card-metric">
+                  {teamStake != null
+                    ? <CountUp value={Number(formatUnits(teamStake, 18))} suffix=" RWAAN" decimals={0} />
+                    : "— RWAAN"}
+                </div>
+                <span className="ob-card-note">Cumulative downline principal</span>
+              </Reveal>
+
+              <Reveal className="ob-card" delay={0.14}>
+                <div className="ob-card-head"><span className="ob-tag"><Zap className="h-3.5 w-3.5" /> Affiliate Earned</span></div>
+                <div className="ob-card-metric">
+                  {affEarned != null
+                    ? <CountUp value={Number(formatUnits(affEarned, 18))} suffix=" RWAAN" decimals={2} />
+                    : "0 RWAAN"}
+                </div>
+                <span className="ob-card-note">Commission on downline stakes</span>
+              </Reveal>
+
+              <Reveal className="ob-card" delay={0.21}>
+                <div className="ob-card-head"><span className="ob-tag"><Network className="h-3.5 w-3.5" /> Total Members</span></div>
+                <div className="ob-card-metric">
+                  {networkLoading ? "…" : network ? String(network.total_members) : "0"}
+                </div>
+                <span className="ob-card-note">
+                  {network
+                    ? `L1: ${network.direct_members} · L2: ${network.l2_members} · L3: ${network.l3_members}`
+                    : "L1 · L2 · L3 counted"}
+                </span>
+              </Reveal>
+            </section>
+
+            {/* ── Referral link ── */}
+            <section className="ob-section">
+              <div className="ob-ghost-num" aria-hidden="true">01</div>
+              <div className="ob-section-head">
+                <Reveal><h2 className="ob-h2">Your referral <em>link.</em></h2></Reveal>
+                <Reveal delay={0.06}>
+                  <p>
+                    Anyone who stakes through this link joins your L1 downline — you earn 20% affiliate
+                    commission on their stake, 15% on L2, and 14% on L3.
+                  </p>
+                </Reveal>
               </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <p className="text-muted-foreground mb-1">Members Needed</p>
-                <p className="font-mono font-semibold">
-                  {network?.total_members ?? 0} / {RANK_MEMBER_REQ[nextRank] || "—"}
-                </p>
+
+              <Reveal className="ob-referral-card">
+                <div className="ob-referral-row">
+                  <Link2 className="ob-referral-icon" />
+                  <input
+                    readOnly
+                    value={referralLink}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="ob-referral-input"
+                    aria-label="Your referral link"
+                  />
+                  <Magnetic strength={0.2}>
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className={`ob-btn-gold ob-copy-btn ${copied ? "ob-copy-btn-done" : ""}`}
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {copied ? "Copied!" : "Copy"}
+                    </button>
+                  </Magnetic>
+                </div>
+                {uplineDisplay && (
+                  <p className="ob-referral-upline">
+                    Your referrer: <code>{uplineDisplay}</code>
+                  </p>
+                )}
+              </Reveal>
+            </section>
+
+            {/* ── Rank card ── */}
+            <section className="ob-section">
+              <div className="ob-ghost-num" aria-hidden="true">02</div>
+              <div className="ob-section-head">
+                <Reveal><h2 className="ob-h2">Rank &amp; <em>progress.</em></h2></Reveal>
+                <Reveal delay={0.06}>
+                  <p>Rank is calculated from team stake on-chain. Each tier unlocks a daily reward from the rank pool.</p>
+                </Reveal>
               </div>
-            </div>
-          </div>
-        )}
 
-        {currentRank === 12 && (
-          <p className="text-sm text-yellow-500 font-semibold">🏆 Maximum rank achieved — Jeep level!</p>
-        )}
-      </div>
-
-      {/* ── Upline ── */}
-      {(uplineChain || network?.upline) && (
-        <div className="rounded-xl border bg-card p-4 flex items-center gap-3">
-          <span className="text-xl">⬆️</span>
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Your Referrer</p>
-            <p className="font-mono text-sm font-semibold">
-              {uplineChain && uplineChain !== "0x0000000000000000000000000000000000000000"
-                ? short(uplineChain)
-                : network?.upline ? short(network.upline) : "—"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Leg summary ── */}
-      {network && (network.big_leg || network.direct_members > 0) && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border bg-card p-4 space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Big Leg 💪</p>
-            {network.big_leg ? (
-              <>
-                <p className="font-mono text-sm font-bold">{short(network.big_leg.wallet)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {fmt(BigInt(network.big_leg.volume))} RWAAN staked
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {network.big_leg.sub_members} sub-members
-                </p>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">No referrals yet</p>
-            )}
-          </div>
-          <div className="rounded-xl border bg-card p-4 space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Other Legs 🌿</p>
-            <p className="font-mono text-sm font-bold">
-              {fmt(BigInt(network.small_leg_volume ?? "0"))} RWAAN
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {network.small_leg_count} direct member{network.small_leg_count !== 1 ? "s" : ""}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Level breakdown ── */}
-      <div className="rounded-xl border bg-card p-5 space-y-3">
-        <h3 className="font-semibold text-sm">Downline by Level</h3>
-        {[
-          { level: "L1 — Direct", count: network?.direct_members ?? 0, commission: "20%" },
-          { level: "L2", count: network?.l2_members ?? 0, commission: "15%" },
-          { level: "L3", count: network?.l3_members ?? 0, commission: "14%" },
-        ].map((row) => (
-          <div key={row.level} className="flex items-center justify-between py-2 border-b last:border-0">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{row.level}</span>
-              <span className="text-sm text-muted-foreground">{row.count} member{row.count !== 1 ? "s" : ""}</span>
-            </div>
-            <span className="text-xs font-semibold text-emerald-500">{row.commission} affiliate</span>
-          </div>
-        ))}
-        {(network?.total_members ?? 0) > (network?.direct_members ?? 0) + (network?.l2_members ?? 0) + (network?.l3_members ?? 0) && (
-          <p className="text-xs text-muted-foreground text-center pt-1">
-            + deeper levels tracked on-chain via teamStake
-          </p>
-        )}
-      </div>
-
-      {/* ── L1 member list ── */}
-      {network && network.l1.length > 0 && (
-        <div className="rounded-xl border bg-card overflow-hidden">
-          <div className="px-5 py-3 border-b bg-muted/30">
-            <h3 className="font-semibold text-sm">Direct Referrals (L1)</h3>
-          </div>
-          <div className="divide-y">
-            {network.l1.map((m, i) => (
-              <div key={m.referee} className="flex items-center justify-between px-5 py-3 hover:bg-muted/20 transition-colors">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-5">{i + 1}</span>
+              <Reveal className="ob-rank-card">
+                <div className="ob-rank-head">
                   <div>
-                    <p className="font-mono text-sm font-semibold">{short(m.referee)}</p>
-                    <p className="text-xs text-muted-foreground">{m.sub_members} sub-members</p>
+                    <span className="ob-tag"><Star className="h-3.5 w-3.5" /> Current rank</span>
+                    <div className="ob-rank-title">
+                      {currentRank === 0 ? "Unranked" : RANK_LABELS[currentRank]}
+                    </div>
+                    {currentRank > 0 && (
+                      <div className="ob-rank-award">{RANK_AWARDS[currentRank]} / day</div>
+                    )}
+                  </div>
+                  <div className="ob-rank-badge">
+                    {currentRank === 0 ? "🏁" : currentRank >= 11 ? "🏆" : "⭐"}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-mono font-semibold">{fmt(BigInt(m.amount))} RWAAN</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(m.joined_at).toLocaleDateString()}
-                  </p>
-                </div>
+
+                {currentRank === 12 && (
+                  <div className="ob-rank-maxed">
+                    Maximum rank achieved — Jeep level unlocked.
+                  </div>
+                )}
+
+                {nextRank && (
+                  <div className="ob-rank-progress">
+                    <div className="ob-rank-progress-label">
+                      <span>Progress to {RANK_LABELS[nextRank]}</span>
+                      <span className="ob-rank-pct">{teamPct.toFixed(1)}%</span>
+                    </div>
+                    <div className="ob-rank-bar-track">
+                      <div className="ob-rank-bar-fill" style={{ width: `${teamPct}%` }} />
+                    </div>
+                    <div className="ob-rank-stats">
+                      <div className="ob-rank-stat">
+                        <span>Team Stake</span>
+                        <strong>
+                          {fmt(teamStake)} / {nextTeamReq != null ? fmt(nextTeamReq) : "—"} RWAAN
+                        </strong>
+                      </div>
+                      <div className="ob-rank-stat">
+                        <span>Award at next rank</span>
+                        <strong>{RANK_AWARDS[nextRank]}/day</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Reveal>
+
+              {/* Rank table */}
+              <Reveal delay={0.1} className="ob-rank-table-wrap">
+                <table className="ob-rank-table">
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Team Stake Required</th>
+                      <th>Daily Award</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const rid = i + 1;
+                      const req = rankTeamReq.get(rid);
+                      const isActive = rid === currentRank;
+                      const isDone = rid < currentRank;
+                      return (
+                        <tr key={rid} className={isActive ? "ob-rank-row-active" : isDone ? "ob-rank-row-done" : ""}>
+                          <td>{RANK_LABELS[rid] ?? `Rank ${rid}`}</td>
+                          <td>{req != null ? `${fmt(req)} RWAAN` : "—"}</td>
+                          <td>{RANK_AWARDS[rid]}</td>
+                          <td>
+                            {isActive ? <span className="ob-live-pill"><span className="ob-live" /> active</span>
+                              : isDone ? <span className="ob-rank-achieved">achieved</span>
+                              : <span className="ob-rank-locked">locked</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </Reveal>
+            </section>
+
+            {/* ── Downline ── */}
+            <section className="ob-section">
+              <div className="ob-ghost-num" aria-hidden="true">03</div>
+              <div className="ob-section-head">
+                <Reveal><h2 className="ob-h2">Your <em>downline.</em></h2></Reveal>
+                <Reveal delay={0.06}><p>Direct referrals and their sub-networks, indexed from on-chain Staked events.</p></Reveal>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* ── Empty state ── */}
-      {!loading && network && network.total_members === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 gap-3 rounded-xl border border-dashed">
-          <span className="text-4xl">🌱</span>
-          <p className="font-semibold">No downline yet</p>
-          <p className="text-sm text-muted-foreground text-center max-w-xs">
-            Share your referral link to start building your network and earn affiliate commissions.
-          </p>
-        </div>
-      )}
+              {/* Leg split */}
+              {network && (network.big_leg || network.direct_members > 0) && (
+                <Reveal className="ob-leg-grid">
+                  <div className="ob-card">
+                    <div className="ob-card-head"><span className="ob-tag">Big leg</span></div>
+                    {network.big_leg ? (
+                      <>
+                        <div className="ob-card-metric" style={{ fontSize: "1.1rem" }}>
+                          {short(network.big_leg.wallet)}
+                        </div>
+                        <span className="ob-card-note">
+                          {fmt(BigInt(network.big_leg.volume))} RWAAN · {network.big_leg.sub_members} sub-members
+                        </span>
+                      </>
+                    ) : (
+                      <span className="ob-card-note">No referrals yet</span>
+                    )}
+                  </div>
+                  <div className="ob-card">
+                    <div className="ob-card-head"><span className="ob-tag">Other legs</span></div>
+                    <div className="ob-card-metric" style={{ fontSize: "1.1rem" }}>
+                      {fmt(BigInt(network.small_leg_volume ?? "0"))} RWAAN
+                    </div>
+                    <span className="ob-card-note">
+                      {network.small_leg_count} direct member{network.small_leg_count !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </Reveal>
+              )}
 
-      {loading && (
-        <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-          Loading network data…
-        </div>
-      )}
+              {/* Level breakdown */}
+              <Reveal delay={0.08} className="ob-downline-levels">
+                {[
+                  { level: "L1 — Direct", count: network?.direct_members ?? 0, commission: "20%" },
+                  { level: "L2", count: network?.l2_members ?? 0, commission: "15%" },
+                  { level: "L3", count: network?.l3_members ?? 0, commission: "14%" },
+                ].map((row) => (
+                  <div key={row.level} className="ob-downline-row">
+                    <span className="ob-tag">{row.level}</span>
+                    <span className="ob-downline-count">{row.count} member{row.count !== 1 ? "s" : ""}</span>
+                    <span className="ob-downline-comm">{row.commission} affiliate</span>
+                  </div>
+                ))}
+              </Reveal>
+
+              {/* L1 member list */}
+              {network && network.l1.length > 0 && (
+                <Reveal delay={0.12} className="ob-l1-list">
+                  <div className="ob-l1-head">
+                    <span className="ob-tag"><ShieldCheck className="h-3.5 w-3.5" /> Direct referrals</span>
+                  </div>
+                  {network.l1.map((m, i) => (
+                    <div key={m.referee} className="ob-l1-row">
+                      <span className="ob-l1-idx">{String(i + 1).padStart(2, "0")}</span>
+                      <div className="ob-l1-info">
+                        <span className="ob-l1-addr">{short(m.referee)}</span>
+                        <span className="ob-card-note">{m.sub_members} sub-members</span>
+                      </div>
+                      <div className="ob-l1-right">
+                        <span className="ob-l1-amount">{fmt(BigInt(m.amount))} RWAAN</span>
+                        <span className="ob-card-note">{new Date(m.joined_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </Reveal>
+              )}
+
+              {/* Empty state */}
+              {!networkLoading && network && network.total_members === 0 && (
+                <Reveal className="ob-pos-empty">
+                  <Network className="h-5 w-5" />
+                  <p>No downline yet. Share your referral link above to start earning affiliate commissions.</p>
+                </Reveal>
+              )}
+
+              {networkLoading && (
+                <div className="ob-pos-empty">
+                  <p style={{ opacity: 0.5 }}>Loading network…</p>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </main>
+
+      <AurumFooter />
     </div>
   );
 }

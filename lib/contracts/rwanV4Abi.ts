@@ -53,8 +53,6 @@ export const RWAN_V4_ABI = [
   { type: "function", name: "withdraw", inputs: [{ name: "positionId", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
   { type: "function", name: "withdrawEarly", inputs: [{ name: "positionId", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
   { type: "function", name: "claimMarketplaceCredit", inputs: [{ name: "positionId", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
-  // ── Admin param reads ──────────────────────────────────────────────
-  { type: "function", name: "minStakeAmount", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
   // ── Network / downline reads ────────────────────────────────────────
   { type: "function", name: "referrerOf", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "address" }], stateMutability: "view" },
   { type: "function", name: "teamStake", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
