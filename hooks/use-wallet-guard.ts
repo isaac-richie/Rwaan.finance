@@ -39,21 +39,9 @@ export function useWalletStateGuard() {
       // Also explicitly invalidate all queries to trigger refetch when reconnected
       queryClient.invalidateQueries();
 
-      // Clear localStorage wallet data to prevent auto-reconnect
-      if (typeof window !== "undefined") {
-        const keysToRemove = [
-          "wagmi.store",
-          "wagmi.recentConnectorId",
-          "wagmi.wallet",
-          "wagmi.connected",
-          "@rainbow-kit/recent-wallet",
-          "walletconnect"
-        ];
-
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-
-        console.log("[WalletGuard] Cleared persistent connection state");
-      }
+      // Do NOT clear localStorage wallet keys — Privy manages reconnection.
+      // Wiping wagmi.store here kills the session when the user navigates
+      // between pages (the hook re-mounts and sees a transient disconnect).
     }
 
     // Update refs for next comparison

@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createConfig, fallback, http } from "wagmi";
 import { bsc } from "wagmi/chains";
 import { PrivyProvider } from "@privy-io/react-auth";
@@ -19,14 +19,9 @@ const wagmiConfig = createConfig({
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    if (typeof window !== "undefined" && !window.sessionStorage.getItem("_rwanClean")) {
-      ["wagmi.store", "wagmi.connected", "wagmi.wallet", "wagmi.injected", "wc@2", "WCM_VERSION"].forEach((k) => {
-        Object.keys(localStorage).filter((lk) => lk.startsWith(k)).forEach((lk) => localStorage.removeItem(lk));
-      });
-      window.sessionStorage.setItem("_rwanClean", "1");
-    }
-  }, []);
+  // Privy manages wallet reconnection — do not clear wagmi/wc localStorage
+  // keys here. The old cleanup was killing the wallet session on every new
+  // browser tab and on client-side navigation between pages.
 
   const [queryClient] = useState(
     () =>
