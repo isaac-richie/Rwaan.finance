@@ -123,7 +123,7 @@ export function Footer() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] p-0.5">
                   <Image
                     src="/logo-rwaan-network.png"
-                    alt="RWAN"
+                    alt="RWAAN"
                     width={32}
                     height={32}
                     className="h-8 w-8 rounded-[8px] object-cover"

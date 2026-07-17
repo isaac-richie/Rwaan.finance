@@ -48,13 +48,13 @@ function TermsModal() {
       </DialogTrigger>
       <DialogContent className="au-terms-modal">
         <div className="au-terms-head">
-          <img src="/logo-rwaan.png" alt="RWAN" className="v2-brand-mark small" width={24} height={24} />
+          <img src="/logo-rwaan.png" alt="RWAAN" className="v2-brand-mark small" width={24} height={24} />
           <div>
             <DialogTitle asChild>
               <h3>Terms &amp; Conditions</h3>
             </DialogTitle>
             <DialogDescription asChild>
-              <p>Please read before using the RWAN staking interface.</p>
+              <p>Please read before using the RWAAN staking interface.</p>
             </DialogDescription>
           </div>
         </div>
@@ -91,9 +91,9 @@ export function AurumFooter() {
       <div className="au-footer-top">
         <div className="au-footer-brand">
           <div className="au-footer-brandline">
-            <img src="/logo-rwaan.png" alt="RWAN" className="au-footer-logo" width={40} height={40} />
+            <img src="/logo-rwaan.png" alt="RWAAN" className="au-footer-logo" width={40} height={40} />
             <div>
-              <strong>RWAN</strong>
+              <strong>RWAAN</strong>
               <span className="au-footer-by">by <em>Rawli Analytics</em></span>
             </div>
           </div>
@@ -104,7 +104,7 @@ export function AurumFooter() {
               target="_blank"
               rel="noopener noreferrer"
               className="au-social"
-              aria-label="RWAN on X (Twitter)"
+              aria-label="RWAAN on X (Twitter)"
             >
               <XIcon className="h-4 w-4" />
             </a>
@@ -113,7 +113,7 @@ export function AurumFooter() {
               target="_blank"
               rel="noopener noreferrer"
               className="au-social"
-              aria-label="RWAN on Telegram"
+              aria-label="RWAAN on Telegram"
             >
               <TelegramIcon className="h-[18px] w-[18px]" />
             </a>
@@ -129,7 +129,7 @@ export function AurumFooter() {
       </div>
 
       <div className="au-footer-bottom">
-        <span>© {new Date().getFullYear()} RWAN. All rights reserved.</span>
+        <span>© {new Date().getFullYear()} RWAAN. All rights reserved.</span>
         <span className="au-footer-meta">
           <span className="v2-footer-dot" /> BNB Chain
           <span className="au-foot-sep">·</span>

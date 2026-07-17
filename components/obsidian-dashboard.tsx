@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * OBSIDIAN — RWAN private terminal.
+ * OBSIDIAN — RWAAN private terminal.
  * A ground-up presentation rebuild (ob-* namespace) on top of the same
  * V4 contract logic. Design pillars: kinetic editorial type, one hero
  * widget (animated yield dial), bento stat widgets, disciplined spacing.
@@ -328,14 +328,14 @@ export function ObsidianDashboard() {
             <div className="ob-card-head">
               <span className="ob-tag"><Layers3 className="h-3.5 w-3.5" /> Total value locked</span>
             </div>
-            <div className="ob-card-metric">{tvl != null ? <CountUp value={tvl} suffix=" RWAN" /> : "— RWAN"}</div>
+            <div className="ob-card-metric">{tvl != null ? <CountUp value={tvl} suffix=" RWAAN" /> : "— RWAAN"}</div>
             <Sparkline />
             <span className="ob-card-note">{contractConfigured ? "Live V4 contract read" : "Awaiting V4 deployment"}</span>
           </Reveal>
 
           <Reveal className="ob-card" delay={0.07}>
             <div className="ob-card-head"><span className="ob-tag"><ShieldCheck className="h-3.5 w-3.5" /> Reward reserve</span></div>
-            <div className="ob-card-metric">{reserve != null ? <CountUp value={reserve} suffix=" RWAN" /> : "—"}</div>
+            <div className="ob-card-metric">{reserve != null ? <CountUp value={reserve} suffix=" RWAAN" /> : "—"}</div>
             <span className="ob-card-note">Segregated reward pool, funded up-front</span>
           </Reveal>
 
@@ -393,7 +393,7 @@ export function ObsidianDashboard() {
               <div className="ob-input">
                 <input id="ob-amount" value={amount} inputMode="decimal"
                   onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} />
-                <span>RWAN</span>
+                <span>RWAAN</span>
               </div>
               <div className="ob-input-meta">
                 <span>{address ? "Wallet connected" : "Wallet not connected"}</span>
@@ -401,10 +401,10 @@ export function ObsidianDashboard() {
               </div>
 
               <div className="ob-est">
-                <div><span>Daily reward</span><strong>{fmt(daily)} RWAN</strong></div>
-                <div><span>{plan.days ? `${plan.days}-day term` : "30-day reference"}</span><strong>{fmt(termReward)} RWAN</strong></div>
+                <div><span>Daily reward</span><strong>{fmt(daily)} RWAAN</strong></div>
+                <div><span>{plan.days ? `${plan.days}-day term` : "30-day reference"}</span><strong>{fmt(termReward)} RWAAN</strong></div>
                 {marketplaceCredit > 0 && (
-                  <div className="ob-est-vip"><span><Gift className="h-4 w-4" /> Marketplace credit</span><strong>{fmt(marketplaceCredit)} RWAN</strong></div>
+                  <div className="ob-est-vip"><span><Gift className="h-4 w-4" /> Marketplace credit</span><strong>{fmt(marketplaceCredit)} RWAAN</strong></div>
                 )}
               </div>
 
@@ -449,8 +449,8 @@ export function ObsidianDashboard() {
           </div>
           <div className="ob-perks">
             {[
-              [Gift, "Marketplace credit", "10% RWAN credit against the marketplace layer."],
-              [Wallet, "VIP status", "Eligibility signal across the RWAN partner ecosystem."],
+              [Gift, "Marketplace credit", "10% RWAAN credit against the marketplace layer."],
+              [Wallet, "VIP status", "Eligibility signal across the RWAAN partner ecosystem."],
               [LockKeyhole, "Principal path", "Original stake accounted for until unlock."],
               [Network, "Network upside", "Referral levels with transparent rank rules."],
             ].map(([Icon, title, copy], i) => {
@@ -470,7 +470,7 @@ export function ObsidianDashboard() {
         {/* ---------- Closing CTA ---------- */}
         <Reveal className="ob-final">
           <div className="ob-final-glow" aria-hidden="true" />
-          <h2 className="ob-h2 ob-final-title">Stake RWAN. <em>Earn a fixed daily rate.</em></h2>
+          <h2 className="ob-h2 ob-final-title">Stake $RWAAN. <em>Earn a fixed daily rate.</em></h2>
           <Magnetic strength={0.3}>
             <button type="button" className="ob-btn-gold ob-btn-lg"
               onClick={address ? () => document.getElementById("position")?.scrollIntoView({ behavior: "smooth" }) : () => open()}>

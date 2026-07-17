@@ -114,7 +114,7 @@ export function Leaderboard() {
                     {address && e.wallet === address.toLowerCase() ? "You" : short(e.wallet)}
                   </span>
                   <span className="lb-pod-val">{fmt(e[metricKey] as string)}</span>
-                  <span className="lb-pod-unit">RWAN</span>
+                  <span className="lb-pod-unit">RWAAN</span>
                 </div>
               );
             })}

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AURUM UI — bespoke motion + interaction primitives for the RWAN landing page.
+ * AURUM UI — bespoke motion + interaction primitives for the RWAAN landing page.
  * Everything here is GPU-cheap (transform/opacity only) and respects
  * prefers-reduced-motion. No layout thrash on scroll.
  */

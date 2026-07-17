@@ -294,17 +294,17 @@ export function MyPositions({
           <Reveal className="ob-pos-summary">
             <div className="ob-pos-stat">
               <span>Staked (active)</span>
-              <strong>{fmt(totals.staked)} <em>RWAN</em></strong>
+              <strong>{fmt(totals.staked)} <em>RWAAN</em></strong>
               {priceUsd > 0 && <small>≈ {fmtUsd(totals.staked * priceUsd)}</small>}
             </div>
             <div className="ob-pos-stat ob-pos-stat-live">
               <span><Sparkles className="h-3 w-3" /> Current rewards</span>
-              <strong className="ob-pos-ticking">{fmt(totals.pending, 6)} <em>RWAN</em></strong>
+              <strong className="ob-pos-ticking">{fmt(totals.pending, 6)} <em>RWAAN</em></strong>
               {priceUsd > 0 && <small>≈ {fmtUsd(totals.pending * priceUsd)}</small>}
             </div>
             <div className="ob-pos-stat">
               <span>Total paid out</span>
-              <strong>{fmt(totals.claimed)} <em>RWAN</em></strong>
+              <strong>{fmt(totals.claimed)} <em>RWAAN</em></strong>
               {priceUsd > 0 && <small>≈ {fmtUsd(totals.claimed * priceUsd)}</small>}
             </div>
             <div className="ob-pos-stat">
@@ -346,9 +346,9 @@ export function MyPositions({
             </DialogDescription>
           </DialogHeader>
           <div className="ob-confirm-rows">
-            <div><span>Staked amount</span><strong>{fmt(earlyReceiveTokens + earlyPenaltyTokens)} RWAN</strong></div>
-            <div className="ob-confirm-penalty"><span>Early-exit penalty ({earlyConfirmPlan ? (earlyConfirmPlan.earlyPenaltyBps / 100).toFixed(0) : "—"}%)</span><strong>-{fmt(earlyPenaltyTokens)} RWAN</strong></div>
-            <div className="ob-confirm-receive"><span>You receive</span><strong>{fmt(earlyReceiveTokens)} RWAN</strong></div>
+            <div><span>Staked amount</span><strong>{fmt(earlyReceiveTokens + earlyPenaltyTokens)} RWAAN</strong></div>
+            <div className="ob-confirm-penalty"><span>Early-exit penalty ({earlyConfirmPlan ? (earlyConfirmPlan.earlyPenaltyBps / 100).toFixed(0) : "—"}%)</span><strong>-{fmt(earlyPenaltyTokens)} RWAAN</strong></div>
+            <div className="ob-confirm-receive"><span>You receive</span><strong>{fmt(earlyReceiveTokens)} RWAAN</strong></div>
           </div>
           <DialogFooter>
             <button type="button" className="ob-btn-ghost" onClick={() => setEarlyConfirmId(null)}>Cancel</button>
@@ -426,7 +426,7 @@ function PositionCard({
       </div>
 
       <div className="ob-pos-amount">
-        {fmt(amountTokens)} <em>RWAN</em>
+        {fmt(amountTokens)} <em>RWAAN</em>
         {priceUsd > 0 && <small>≈ {fmtUsd(amountTokens * priceUsd)}</small>}
       </div>
 
@@ -443,11 +443,11 @@ function PositionCard({
       <div className="ob-pos-rewards">
         <div>
           <span>{position.withdrawn ? "Final reward" : "Current reward"}</span>
-          <strong className={position.withdrawn ? "" : "ob-pos-ticking"}>{fmt(liveValue, 6)} RWAN</strong>
+          <strong className={position.withdrawn ? "" : "ob-pos-ticking"}>{fmt(liveValue, 6)} RWAAN</strong>
         </div>
         <div>
           <span>Claimed to date</span>
-          <strong>{fmt(claimedTokens)} RWAN</strong>
+          <strong>{fmt(claimedTokens)} RWAAN</strong>
         </div>
       </div>
 

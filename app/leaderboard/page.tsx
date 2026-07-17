@@ -1,8 +1,8 @@
 import { Leaderboard } from "@/components/leaderboard";
 
 export const metadata = {
-  title: "Leaderboard — $RWAN Staking",
-  description: "Top stakers, reward earners, and referrers on the RWAN network.",
+  title: "Leaderboard — $RWAAN Staking",
+  description: "Top stakers, reward earners, and referrers on the RWAAN network.",
 };
 
 export default function LeaderboardPage() {

@@ -29,8 +29,8 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "$RWAN Staking - Fixed Daily Rates on BNB Chain",
-  description: "Stake $RWAN on BNB Smart Chain across seven plans, from no-lock Flex to a 720-day marketplace tier, with rates and terms set on-chain.",
+  title: "$RWAAN Staking - Fixed Daily Rates on BNB Chain",
+  description: "Stake $RWAAN on BNB Smart Chain across seven plans, from no-lock Flex to a 720-day marketplace tier, with rates and terms set on-chain.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
