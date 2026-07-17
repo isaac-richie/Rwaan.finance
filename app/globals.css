@@ -2278,7 +2278,8 @@ img.v2-brand-mark {
 .ob-brand:hover .ob-brand-mark { transform: rotate(-8deg) scale(1.06); }
 .ob-brand-name {
   font-family: var(--font-syne), sans-serif;
-  font-size: 14px; font-weight: 700; letter-spacing: 0.24em;
+  font-size: 15px; font-weight: 600; letter-spacing: 0.01em;
+  white-space: nowrap;
   background: linear-gradient(90deg, #fff, #ffe9a8);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
@@ -2838,6 +2839,7 @@ img.v2-brand-mark {
 }
 @media (max-width: 640px) {
   .ob-nav { top: 10px; min-height: 58px; padding: 0 8px 0 14px; }
+  .ob-brand-name { font-size: 12px; }
   .ob-hero { padding-top: 36px; }
   .ob-h1 { font-size: clamp(42px, 12vw, 56px); }
   .ob-sub { font-size: 14.5px; }

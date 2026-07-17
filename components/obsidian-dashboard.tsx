@@ -252,8 +252,8 @@ export function ObsidianDashboard() {
       {/* ---------- Nav ---------- */}
       <header className="ob-nav">
         <a href="#top" className="ob-brand">
-          <img src="/logo-rwaan.png" alt="RWAN" className="ob-brand-mark" width={34} height={34} />
-          <span className="ob-brand-name">RWAN</span>
+          <img src="/logo-rwaan.png" alt="Rawli Analytics" className="ob-brand-mark" width={34} height={34} />
+          <span className="ob-brand-name">Rawli Analytics</span>
         </a>
         <nav className="ob-nav-links" aria-label="Primary">
           <a href="#stake">Plans</a>
