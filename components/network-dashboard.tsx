@@ -21,6 +21,7 @@ import {
 import { RWAN_V4_ABI, RWAN_V4_STAKING_ADDRESS } from "@/lib/contracts/rwanV4Abi";
 import { CountUp, Grain, Magnetic, Reveal, Spotlight } from "@/components/aurum-ui";
 import { AurumFooter } from "@/components/aurum-footer";
+import { WalletButton } from "@/components/wallet-button";
 import { buildReferralLink } from "@/lib/utils/referral";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -211,10 +212,7 @@ export function NetworkDashboard() {
           <Link href="/#footer">Legal</Link>
         </nav>
         <Magnetic strength={0.25}>
-          <button type="button" className="ob-wallet" onClick={() => open()}>
-            <Wallet className="h-4 w-4" />
-            {address ? `${address.slice(0, 5)}…${address.slice(-4)}` : "Connect"}
-          </button>
+          <WalletButton />
         </Magnetic>
       </header>
 

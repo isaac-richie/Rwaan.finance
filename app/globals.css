@@ -2306,6 +2306,50 @@ img.v2-brand-mark {
 }
 .ob-wallet:hover { transform: translateY(-2px); filter: brightness(1.06); }
 
+.ob-wallet-wrap { position: relative; }
+.ob-wallet-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  min-width: 260px; padding: 6px;
+  background: hsl(225 20% 7%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  z-index: 100;
+  animation: ob-dd-in 120ms ease-out;
+}
+@keyframes ob-dd-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+.ob-wallet-dropdown button,
+.ob-wallet-dropdown a {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 12px; border: 0; border-radius: 8px;
+  background: transparent; color: rgba(255,255,255,0.55);
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; text-decoration: none;
+  transition: background 120ms, color 120ms;
+}
+.ob-wallet-dropdown button:hover,
+.ob-wallet-dropdown a:hover { background: rgba(255,255,255,0.06); color: #fff; }
+
+.ob-wd-addr {
+  padding: 10px 12px;
+}
+.ob-wd-label {
+  display: block; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(255,255,255,0.25); margin-bottom: 6px;
+}
+.ob-wd-addr code {
+  font-size: 11px; color: rgba(255,255,255,0.5);
+  word-break: break-all; line-height: 1.5;
+}
+.ob-wd-divider {
+  height: 1px; margin: 4px 8px;
+  background: rgba(255,255,255,0.06);
+}
+.ob-wd-danger { color: rgba(239,68,68,0.7) !important; }
+.ob-wd-danger:hover { color: #ef4444 !important; background: rgba(239,68,68,0.08) !important; }
+
 /* ---------- Hero ---------- */
 .ob-hero {
   display: grid;

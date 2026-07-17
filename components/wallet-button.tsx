@@ -1,120 +1,77 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { useAccount, useDisconnect } from "wagmi";
-import { Copy, ExternalLink, LogOut, Wallet, ChevronDown } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { formatAddress } from "@/lib/utils/format";
-import { useToast } from "@/components/ui/use-toast";
+import { useAccount } from "wagmi";
+import { Check, Copy, ExternalLink, LogOut, Wallet } from "lucide-react";
 
 export function WalletButton() {
-  const { login, logout } = usePrivy();
-  const { address, isConnected } = useAccount();
-  const { toast } = useToast();
+  const { login, logout, ready, authenticated } = usePrivy();
+  const { address } = useAccount();
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
-  const walletAddress = useMemo(() => {
-    if (isConnected && address) return address;
-    return null;
-  }, [address, isConnected]);
+  const connected = ready && authenticated && !!address;
 
-  const shortAddress = walletAddress ? formatAddress(walletAddress) : null;
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
 
-  const copyAddress = () => {
-    if (walletAddress) {
-      navigator.clipboard.writeText(walletAddress);
-      toast({
-        title: "Address copied",
-        description: "Wallet address copied to clipboard",
-      });
+  const handleClick = useCallback(() => {
+    if (connected) {
+      setOpen((v) => !v);
+    } else {
+      login();
     }
-  };
+  }, [connected, login]);
 
-  const handleDisconnect = () => {
+  const handleCopy = useCallback(() => {
+    if (!address) return;
+    navigator.clipboard?.writeText(address).catch(() => {});
+    setCopied(true);
+    setTimeout(() => { setCopied(false); setOpen(false); }, 1200);
+  }, [address]);
+
+  const handleDisconnect = useCallback(() => {
+    setOpen(false);
     logout();
-  };
-
-  if (!walletAddress) {
-    return (
-      <Button
-        onClick={login}
-        className="gap-2 h-10 px-4 text-[13px] font-semibold sm:px-5"
-      >
-        <Wallet className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Connect Wallet</span>
-        <span className="sm:hidden">Connect</span>
-      </Button>
-    );
-  }
+  }, [logout]);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="secondary"
-          className="gap-2 h-10 px-3.5 text-[13px] font-medium sm:px-4 border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06]"
-        >
-          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#F3BA2F]/10">
-            <Wallet className="h-3 w-3 text-[#F3BA2F]" />
-          </span>
-          <span className="font-mono text-white/70">{shortAddress ?? "Wallet"}</span>
-          <ChevronDown className="h-3 w-3 text-white/25" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72 border-white/[0.06] bg-[hsl(225_20%_6%)] backdrop-blur-xl">
-        <DropdownMenuLabel className="text-[11px] uppercase tracking-[0.15em] text-white/30 font-medium">
-          Connected Wallet
-        </DropdownMenuLabel>
-
-        <div className="px-3 py-2">
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-            <div className="text-[10px] uppercase tracking-wider text-white/25 mb-1.5">
-              Address
-            </div>
-            <code className="text-[11px] font-mono text-white/60 break-all leading-relaxed">
-              {walletAddress}
-            </code>
+    <div ref={wrapRef} className="ob-wallet-wrap">
+      <button type="button" className="ob-wallet" onClick={handleClick}>
+        <Wallet className="h-4 w-4" />
+        {connected ? `${address!.slice(0, 5)}…${address!.slice(-4)}` : "Connect"}
+      </button>
+      {open && connected && (
+        <div className="ob-wallet-dropdown">
+          <div className="ob-wd-addr">
+            <span className="ob-wd-label">Connected</span>
+            <code>{address}</code>
           </div>
-        </div>
-
-        <DropdownMenuSeparator className="bg-white/[0.04]" />
-
-        <DropdownMenuItem onClick={copyAddress} className="gap-3 cursor-pointer text-white/50 hover:text-white/80">
-          <Copy className="h-3.5 w-3.5" />
-          <span className="text-[13px]">Copy address</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem asChild>
-          <a
-            href={`https://bscscan.com/address/${walletAddress}`}
-            target="_blank"
-            rel="noreferrer"
-            className="gap-3 cursor-pointer text-white/50 hover:text-white/80"
-          >
+          <div className="ob-wd-divider" />
+          <button type="button" onClick={handleCopy}>
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied!" : "Copy address"}
+          </button>
+          <a href={`https://bscscan.com/address/${address}`} target="_blank" rel="noreferrer">
             <ExternalLink className="h-3.5 w-3.5" />
-            <span className="text-[13px]">View on BSCScan</span>
+            View on BSCScan
           </a>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator className="bg-white/[0.04]" />
-
-        <DropdownMenuItem
-          onClick={handleDisconnect}
-          className="gap-3 cursor-pointer text-red-400/70 focus:text-red-400 focus:bg-red-500/[0.06]"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          <span className="text-[13px]">Disconnect</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <div className="ob-wd-divider" />
+          <button type="button" className="ob-wd-danger" onClick={handleDisconnect}>
+            <LogOut className="h-3.5 w-3.5" />
+            Disconnect
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

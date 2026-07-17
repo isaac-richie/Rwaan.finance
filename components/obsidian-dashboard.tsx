@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
+import { WalletButton } from "@/components/wallet-button";
 import { ERC20_WRITE_ABI } from "@/lib/contracts/erc20WriteAbi";
 import { RWAN_V4_ABI, RWAN_V4_STAKING_ADDRESS } from "@/lib/contracts/rwanV4Abi";
 import { CountUp, Grain, Magnetic, Marquee, Reveal, Spotlight, Tilt } from "@/components/aurum-ui";
@@ -298,10 +299,7 @@ export function ObsidianDashboard() {
           <a href="#footer">Legal</a>
         </nav>
         <Magnetic strength={0.25}>
-          <button type="button" className="ob-wallet" onClick={() => open()}>
-            <Wallet className="h-4 w-4" />
-            {address ? `${address.slice(0, 5)}…${address.slice(-4)}` : "Connect"}
-          </button>
+          <WalletButton />
         </Magnetic>
       </header>
 
