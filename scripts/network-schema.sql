@@ -1,6 +1,12 @@
 -- Network / downline storage for RWAN staking.
 -- Run once in the Supabase SQL editor (after leaderboard-schema.sql).
 
+-- Short referral codes: one per wallet, generated on first visit to /network.
+create table if not exists ref_codes (
+  code    text primary key,            -- e.g. "AB3X7Q2M"
+  wallet  text not null unique         -- lowercased wallet address
+);
+
 -- One row per referral relationship, indexed from Staked events.
 create table if not exists referral_links (
   referee     text not null,                     -- the wallet that staked

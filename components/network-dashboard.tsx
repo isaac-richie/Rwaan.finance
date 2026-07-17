@@ -118,7 +118,6 @@ export function NetworkDashboard() {
       { address: staking, abi: RWAN_V4_ABI, functionName: "teamStake",       args: [address] },
       { address: staking, abi: RWAN_V4_ABI, functionName: "referrerOf",      args: [address] },
       { address: staking, abi: RWAN_V4_ABI, functionName: "userRanks",       args: [address] },
-      { address: staking, abi: RWAN_V4_ABI, functionName: "affiliateEarned", args: [address] },
     ] : [],
     query: { enabled: !!staking && !!address, refetchInterval: 30_000 },
   });
@@ -156,7 +155,6 @@ export function NetworkDashboard() {
   const teamStake     = chainReads.data?.[1]?.result as bigint | undefined;
   const uplineChain   = chainReads.data?.[2]?.result as string | undefined;
   const rankData      = chainReads.data?.[3]?.result as readonly [number, bigint, bigint] | undefined;
-  const affEarned     = chainReads.data?.[4]?.result as bigint | undefined;
 
   const currentRank = rankData ? Number(rankData[0]) : 0;
   const nextRank    = currentRank < 12 ? currentRank + 1 : null;
@@ -274,13 +272,9 @@ export function NetworkDashboard() {
               </Reveal>
 
               <Reveal className="ob-card" delay={0.14}>
-                <div className="ob-card-head"><span className="ob-tag"><Zap className="h-3.5 w-3.5" /> Affiliate Earned</span></div>
-                <div className="ob-card-metric">
-                  {affEarned != null
-                    ? <CountUp value={Number(formatUnits(affEarned, 18))} suffix=" RWAAN" decimals={2} />
-                    : "0 RWAAN"}
-                </div>
-                <span className="ob-card-note">Commission on downline stakes</span>
+                <div className="ob-card-head"><span className="ob-tag"><Zap className="h-3.5 w-3.5" /> Affiliate Rewards</span></div>
+                <div className="ob-card-metric">Paid to wallet</div>
+                <span className="ob-card-note">Commissions sent on every stake</span>
               </Reveal>
 
               <Reveal className="ob-card" delay={0.21}>

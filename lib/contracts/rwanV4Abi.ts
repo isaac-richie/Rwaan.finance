@@ -57,7 +57,7 @@ export const RWAN_V4_ABI = [
   { type: "function", name: "referrerOf", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "address" }], stateMutability: "view" },
   { type: "function", name: "teamStake", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
   { type: "function", name: "totalUserStaked", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  { type: "function", name: "affiliateEarned", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  // affiliateEarned not in V4 — commissions are pushed directly to wallet on every stake
   {
     type: "function", name: "userRanks",
     inputs: [{ name: "user", type: "address" }],

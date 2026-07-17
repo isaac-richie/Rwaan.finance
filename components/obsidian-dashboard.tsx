@@ -216,11 +216,7 @@ export function ObsidianDashboard() {
     args: address ? [address] : undefined,
     query: { enabled: contractConfigured && Boolean(address) },
   });
-  const affiliateEarnedRead = useReadContract({
-    address: contractAddress, abi: RWAN_V4_ABI, functionName: "affiliateEarned",
-    args: address ? [address] : undefined,
-    query: { enabled: contractConfigured && Boolean(address), refetchInterval: 30_000 },
-  });
+  // V4 pays affiliate commissions directly to wallet — no on-chain accumulator to query
 
   const livePlans = useMemo(() => planReads.data?.flatMap((item, index) => {
     const result = item.result as readonly [bigint, bigint, bigint, boolean] | undefined;
@@ -371,7 +367,7 @@ export function ObsidianDashboard() {
             <Link href="/network" className="ob-card-hit" aria-label="View your network and referral earnings" />
             <div className="ob-card-head"><span className="ob-tag"><Network className="h-3.5 w-3.5" /> Your network</span></div>
             <div className="ob-card-metric">
-              {!address ? "—" : affiliateEarnedRead.data != null ? <CountUp value={Number(affiliateEarnedRead.data) / 1e18} suffix=" RWAAN" /> : "0 RWAAN"}
+              {address ? "View network" : "—"}
             </div>
             <span className="ob-card-note">{address ? "Referral earnings — view downline" : "Affiliate levels & rank rules on-chain"}</span>
           </Reveal>
