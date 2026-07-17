@@ -2709,17 +2709,36 @@ img.v2-brand-mark {
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
 .ob-input > span { font-size: 12px; font-weight: 800; letter-spacing: 0.18em; color: var(--ob-gold-hi); }
+.ob-input-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.ob-input-header .ob-label { margin-bottom: 0; }
+.ob-balance {
+  font-size: 12px; color: var(--ob-dim);
+}
+.ob-balance strong { color: var(--ob-fg); font-weight: 600; }
+
 .ob-input-meta {
   display: flex; align-items: center; justify-content: space-between;
   margin-top: 10px;
   font-size: 12px; color: var(--ob-dim);
 }
-.ob-input-meta button {
-  border: 0; background: transparent; padding: 0;
-  font-family: inherit; font-size: 12px; font-weight: 600;
-  color: var(--ob-gold-hi); cursor: pointer;
+.ob-quick-fills {
+  display: flex; align-items: center; gap: 4px;
 }
-.ob-input-meta button:hover { color: #fff; }
+.ob-quick-fills button {
+  border: 1px solid var(--ob-line); background: rgba(245,242,234,0.04);
+  border-radius: 4px; padding: 3px 10px;
+  font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--ob-gold-hi); cursor: pointer;
+  transition: background 150ms, color 150ms, border-color 150ms;
+}
+.ob-quick-fills button:hover {
+  background: rgba(240, 185, 11, 0.12);
+  border-color: rgba(240, 185, 11, 0.4);
+  color: #fff;
+}
 .ob-est {
   display: grid; gap: 14px;
   margin-top: 28px;

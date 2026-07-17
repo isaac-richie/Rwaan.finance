@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi";
-import { parseUnits, zeroAddress } from "viem";
+import { formatUnits, parseUnits, zeroAddress } from "viem";
 import { motion, useScroll, useSpring } from "framer-motion";
 import {
   ArrowUpRight,
@@ -216,6 +216,15 @@ export function ObsidianDashboard() {
     args: address ? [address] : undefined,
     query: { enabled: contractConfigured && Boolean(address) },
   });
+  const balanceRead = useReadContract({
+    address: tokenRead.data,
+    abi: ERC20_WRITE_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!tokenRead.data && !!address, refetchInterval: 15_000 },
+  });
+  const walletBalance = balanceRead.data ?? 0n;
+
   // V4 pays affiliate commissions directly to wallet — no on-chain accumulator to query
 
   const livePlans = useMemo(() => planReads.data?.flatMap((item, index) => {
@@ -416,15 +425,26 @@ export function ObsidianDashboard() {
                 <span className="ob-rate-pill">{plan.rate.toFixed(2)}% daily</span>
               </div>
 
-              <label className="ob-label" htmlFor="ob-amount">Amount to stake</label>
+              <div className="ob-input-header">
+                <label className="ob-label" htmlFor="ob-amount">Amount to stake</label>
+                {address && (
+                  <span className="ob-balance">
+                    Balance: <strong>{walletBalance > 0n ? fmt(Number(formatUnits(walletBalance, 18))) : "0"} RWAAN</strong>
+                  </span>
+                )}
+              </div>
               <div className="ob-input">
                 <input id="ob-amount" value={amount} inputMode="decimal"
                   onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} />
                 <span>RWAAN</span>
               </div>
               <div className="ob-input-meta">
+                <div className="ob-quick-fills">
+                  <button type="button" onClick={() => minimumStake > 0n && setAmount(formatUnits(minimumStake, 18).split(".")[0])}>Min</button>
+                  <button type="button" onClick={() => walletBalance > 0n && setAmount(String(walletBalance / 10n ** 18n / 2n))}>½</button>
+                  <button type="button" onClick={() => walletBalance > 0n && setAmount(String(walletBalance / 10n ** 18n))}>Max</button>
+                </div>
                 <span>{address ? "Wallet connected" : "Wallet not connected"}</span>
-                <button type="button" onClick={() => setAmount(minimumStake ? String(Number(minimumStake) / 1e18) : "1000")}>Use minimum</button>
               </div>
 
               <div className="ob-est">
