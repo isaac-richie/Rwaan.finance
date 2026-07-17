@@ -7,7 +7,8 @@
  * widget (animated yield dial), bento stat widgets, disciplined spacing.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi";
 import { parseUnits, zeroAddress } from "viem";
@@ -31,6 +32,7 @@ import { RWAN_V4_ABI, RWAN_V4_STAKING_ADDRESS } from "@/lib/contracts/rwanV4Abi"
 import { CountUp, Grain, Magnetic, Marquee, Reveal, Spotlight, Tilt } from "@/components/aurum-ui";
 import { AurumFooter } from "@/components/aurum-footer";
 import { MyPositions } from "@/components/staking/my-positions";
+import { captureReferrerFromUrl, getStoredReferrer } from "@/lib/utils/referral";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -191,6 +193,8 @@ export function ObsidianDashboard() {
   const [selectedPlan, setSelectedPlan] = useState("720");
   const [amount, setAmount] = useState("");
 
+  useEffect(() => { captureReferrerFromUrl(); }, []);
+
   const contractAddress = RWAN_V4_STAKING_ADDRESS ?? zeroAddress;
   const contractConfigured = Boolean(RWAN_V4_STAKING_ADDRESS && RWAN_V4_STAKING_ADDRESS !== zeroAddress);
   const planCount = useReadContract({
@@ -207,6 +211,16 @@ export function ObsidianDashboard() {
   const minStakeRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "minStakeAmount", query: { enabled: contractConfigured } });
   const totalStakedRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "totalStaked", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
   const rewardReserveRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakingRewardReserve", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
+  const referrerOfRead = useReadContract({
+    address: contractAddress, abi: RWAN_V4_ABI, functionName: "referrerOf",
+    args: address ? [address] : undefined,
+    query: { enabled: contractConfigured && Boolean(address) },
+  });
+  const affiliateEarnedRead = useReadContract({
+    address: contractAddress, abi: RWAN_V4_ABI, functionName: "affiliateEarned",
+    args: address ? [address] : undefined,
+    query: { enabled: contractConfigured && Boolean(address), refetchInterval: 30_000 },
+  });
 
   const livePlans = useMemo(() => planReads.data?.flatMap((item, index) => {
     const result = item.result as readonly [bigint, bigint, bigint, boolean] | undefined;
@@ -225,15 +239,28 @@ export function ObsidianDashboard() {
   const marketplaceCredit = plan.days >= 720 && principal >= 1000 ? principal * 0.1 : 0;
   const stakeAmount = (() => { try { return parseUnits(amount || "0", 18); } catch { return 0n; } })();
   const minimumStake = minStakeRead.data ?? 0n;
-  const canSubmit = Boolean(address && contractConfigured && stakeAmount >= minimumStake && stakeAmount > 0n && !isWriting);
+  // referrerOfRead must resolve before submitting — handleStake decides whether
+  // to pass a referrer based on it, and an unresolved read reads as "no
+  // referrer yet" which could wrongly re-attempt setting one and revert.
+  const canSubmit = Boolean(
+    address && contractConfigured && stakeAmount >= minimumStake && stakeAmount > 0n && !isWriting
+      && !referrerOfRead.isLoading
+  );
 
   const tvl = totalStakedRead.data ? Number(totalStakedRead.data) / 1e18 : null;
   const reserve = rewardReserveRead.data ? Number(rewardReserveRead.data) / 1e18 : null;
 
   const handleStake = async () => {
     if (!canSubmit || !tokenRead.data || !address) return;
+    // The contract only allows setting a referrer once per wallet — if one is
+    // already on-chain, a non-zero referrer here would revert the whole stake.
+    const hasReferrer = Boolean(referrerOfRead.data && referrerOfRead.data !== zeroAddress);
+    const stored = getStoredReferrer();
+    const referrer = hasReferrer || !stored || stored.toLowerCase() === address.toLowerCase()
+      ? zeroAddress
+      : stored;
     await writeContractAsync({ address: tokenRead.data, abi: ERC20_WRITE_ABI, functionName: "approve", args: [contractAddress, stakeAmount] });
-    await writeContractAsync({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), zeroAddress] });
+    await writeContractAsync({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), referrer] });
     window.dispatchEvent(new Event("rwan:staked"));
   };
 
@@ -261,6 +288,7 @@ export function ObsidianDashboard() {
           <a href="#stake">Plans</a>
           <a href="#position">Stake</a>
           <a href="#my-positions">Positions</a>
+          <Link href="/network">Network</Link>
           <a href="#perks">Perks</a>
           <a href="#footer">Legal</a>
         </nav>
@@ -339,10 +367,13 @@ export function ObsidianDashboard() {
             <span className="ob-card-note">Segregated reward pool, funded up-front</span>
           </Reveal>
 
-          <Reveal className="ob-card" delay={0.14}>
+          <Reveal className="ob-card ob-card-link" delay={0.14}>
+            <Link href="/network" className="ob-card-hit" aria-label="View your network and referral earnings" />
             <div className="ob-card-head"><span className="ob-tag"><Network className="h-3.5 w-3.5" /> Your network</span></div>
-            <div className="ob-card-metric">{address ? "Connected" : "—"}</div>
-            <span className="ob-card-note">Affiliate levels & rank rules on-chain</span>
+            <div className="ob-card-metric">
+              {!address ? "—" : affiliateEarnedRead.data != null ? <CountUp value={Number(affiliateEarnedRead.data) / 1e18} suffix=" RWAAN" /> : "0 RWAAN"}
+            </div>
+            <span className="ob-card-note">{address ? "Referral earnings — view downline" : "Affiliate levels & rank rules on-chain"}</span>
           </Reveal>
 
           <Reveal className="ob-card" delay={0.21}>

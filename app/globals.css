@@ -2545,6 +2545,8 @@ img.v2-brand-mark {
   color: var(--ob-ink);
 }
 .ob-card-note { margin-top: auto; padding-top: 10px; font-size: 11px; color: var(--ob-dim); }
+.ob-card-link { cursor: pointer; }
+.ob-card-hit { position: absolute; inset: 0; z-index: 5; border-radius: inherit; }
 .ob-card-tvl .ob-spark { margin-top: 8px; }
 .ob-spark { width: 100%; height: 56px; }
 .ob-spark-line { filter: drop-shadow(0 2px 8px rgba(240, 185, 11, 0.5)); }

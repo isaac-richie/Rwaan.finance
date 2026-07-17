@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAccount, useReadContracts } from "wagmi";
 import { formatUnits } from "viem";
+import { Check, Copy } from "lucide-react";
 import { RWAN_V4_ABI, RWAN_V4_STAKING_ADDRESS } from "@/lib/contracts/rwanV4Abi";
+import { buildReferralLink } from "@/lib/utils/referral";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -80,9 +82,20 @@ export function NetworkDashboard() {
   const { address, isConnected } = useAccount();
   const [network, setNetwork] = useState<NetworkData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const addr = address?.toLowerCase();
   const staking = RWAN_V4_STAKING_ADDRESS;
+  const referralLink = address ? buildReferralLink(address) : "";
+
+  const handleCopyLink = async () => {
+    if (!referralLink) return;
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
 
   // on-chain reads
   const { data } = useReadContracts({
@@ -137,6 +150,32 @@ export function NetworkDashboard() {
         <p className="text-sm text-muted-foreground mt-1">
           Your downline, team stake, and rank progress
         </p>
+      </div>
+
+      {/* ── Referral link ── */}
+      <div className="rounded-xl border bg-card p-5 space-y-3">
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Your referral link</p>
+          <p className="text-xs text-muted-foreground">
+            Share it — anyone who stakes through this link joins your downline and pays you affiliate commissions on their stake.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            readOnly
+            value={referralLink}
+            onFocus={(e) => e.currentTarget.select()}
+            className="flex-1 min-w-0 rounded-lg border bg-muted/30 px-3 py-2 text-xs font-mono text-muted-foreground truncate"
+          />
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-black hover:bg-emerald-400 transition-colors"
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
       </div>
 
       {/* ── Stats row ── */}
