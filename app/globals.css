@@ -2246,15 +2246,19 @@ body {
 }
 .ob-brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; }
 .ob-brand-mark {
-  display: inline-flex; align-items: center; justify-content: center;
   width: 34px; height: 34px;
-  border-radius: 11px;
-  background: var(--ob-grad);
-  color: #1a1200;
-  font-family: var(--font-syne), sans-serif;
-  font-size: 17px; font-weight: 800;
-  box-shadow: 0 6px 18px -6px rgba(240, 185, 11, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+  object-fit: contain;
   transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Logo is a transparent-background image mark — strip the old lettermark's
+   gold box/border so nothing shows through the transparent areas. */
+img.v2-brand-mark {
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  transform: none !important;
+  object-fit: contain;
 }
 .ob-brand:hover .ob-brand-mark { transform: rotate(-8deg) scale(1.06); }
 .ob-brand-name {

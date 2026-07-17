@@ -48,7 +48,7 @@ function TermsModal() {
       </DialogTrigger>
       <DialogContent className="au-terms-modal">
         <div className="au-terms-head">
-          <span className="v2-brand-mark small">R</span>
+          <img src="/logo-rwaan.png" alt="RWAN" className="v2-brand-mark small" width={24} height={24} />
           <div>
             <DialogTitle asChild>
               <h3>Terms &amp; Conditions</h3>
@@ -91,7 +91,7 @@ export function AurumFooter() {
       <div className="au-footer-top">
         <div className="au-footer-brand">
           <div className="au-footer-brandline">
-            <span className="v2-brand-mark small">R</span>
+            <img src="/logo-rwaan.png" alt="RWAN" className="v2-brand-mark small" width={24} height={24} />
             <strong>RWAN</strong>
           </div>
           <p>Transparent, reserve-backed staking infrastructure on BNB Chain.</p>

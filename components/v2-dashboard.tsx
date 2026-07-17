@@ -179,7 +179,7 @@ export function V2Dashboard() {
 
       <header className="v2-nav">
         <a href="#top" className="v2-brand" onClick={() => setActiveNav("Overview")}>
-          <span className="v2-brand-mark">R</span>
+          <img src="/logo-rwaan.png" alt="RWAN" className="v2-brand-mark" width={34} height={34} />
           <span>
             <strong>RWAN</strong>
             <small>staking terminal</small>
