@@ -247,7 +247,6 @@ export function ObsidianDashboard() {
       {/* ---------- Topline ---------- */}
       <div className="ob-topline">
         <span className="ob-top-item"><span className="ob-live" /> {contractConfigured ? "V4 live" : "V4 pending"} · BNB Chain</span>
-        <span className="ob-top-item ob-top-price">RWAN $30.00 <em>+2.84%</em></span>
       </div>
 
       {/* ---------- Nav ---------- */}
@@ -282,8 +281,9 @@ export function ObsidianDashboard() {
               <KineticLine words={["is", "a", "choice."]} serifLast delay={0.28} />
             </h1>
             <motion.p className="ob-sub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.75, duration: 0.8 }}>
-              Stake RWAN on transparent, on-chain terms — defined rates,
-              defined exits, and a marketplace tier for the long-range.
+              Seven staking plans on BNB Chain, each with a fixed daily rate
+              and lock term set on-chain — from no-lock Flex at 0.10% to the
+              720-day tier at 1.00%.
             </motion.p>
             <motion.div className="ob-hero-cta" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.7, ease: EASE }}>
               <Magnetic strength={0.35}>
@@ -353,8 +353,8 @@ export function ObsidianDashboard() {
         <section id="stake" className="ob-section">
           <div className="ob-ghost-num" aria-hidden="true">01</div>
           <div className="ob-section-head">
-            <Reveal><h2 className="ob-h2">Six lanes. <em>One rhythm.</em></h2></Reveal>
-            <Reveal delay={0.08}><p>Defined rate, term, and exit for every plan — live values load straight from the V4 contract.</p></Reveal>
+            <Reveal><h2 className="ob-h2">Pick your <em>lock term.</em></h2></Reveal>
+            <Reveal delay={0.08}><p>Every plan&apos;s rate, lock length, and early-exit penalty is set in the V4 contract and loads live below.</p></Reveal>
           </div>
           <div className="ob-plans">
             {displayPlans.map((item, index) => (
@@ -418,8 +418,8 @@ export function ObsidianDashboard() {
             <div className="ob-builder-side">
               <Reveal className="ob-side-card" delay={0.08}>
                 <ShieldCheck className="ob-side-icon" />
-                <h3>Reserve-backed by design</h3>
-                <p>Reward pools are segregated and protected. Marketplace credits are allocated the moment you stake.</p>
+                <h3>Reserves funded up front</h3>
+                <p>Reward pools are segregated from user principal and funded before staking opens. Marketplace credits are allocated the moment you stake.</p>
               </Reveal>
               <Reveal className="ob-side-card" delay={0.16}>
                 <div className="ob-pulse-head"><span className="ob-tag">Network pulse</span></div>
@@ -438,8 +438,8 @@ export function ObsidianDashboard() {
         <section id="perks" className="ob-section">
           <div className="ob-ghost-num" aria-hidden="true">03</div>
           <div className="ob-section-head">
-            <Reveal><h2 className="ob-h2">Built for the <em>long view.</em></h2></Reveal>
-            <Reveal delay={0.08}><p>The 720-day plan is a membership layer — not just a number on a screen.</p></Reveal>
+            <Reveal><h2 className="ob-h2">What the 720-day tier <em>adds.</em></h2></Reveal>
+            <Reveal delay={0.08}><p>On top of its 1.00% daily rate, the market plan carries marketplace credit and VIP eligibility.</p></Reveal>
           </div>
           <div className="ob-perks">
             {[
@@ -464,7 +464,7 @@ export function ObsidianDashboard() {
         {/* ---------- Closing CTA ---------- */}
         <Reveal className="ob-final">
           <div className="ob-final-glow" aria-hidden="true" />
-          <h2 className="ob-h2 ob-final-title">Make your RWAN <em>earn its keep.</em></h2>
+          <h2 className="ob-h2 ob-final-title">Stake RWAN. <em>Earn a fixed daily rate.</em></h2>
           <Magnetic strength={0.3}>
             <button type="button" className="ob-btn-gold ob-btn-lg"
               onClick={address ? () => document.getElementById("position")?.scrollIntoView({ behavior: "smooth" }) : () => open()}>

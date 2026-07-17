@@ -20,10 +20,10 @@ export default function PrivacyPolicyPage() {
                 <section>
                     <h2 className="text-2xl font-semibold text-foreground">1. Introduction</h2>
                     <p>
-                        Welcome to the RWAAN Staking Protocol (&quot;we,&quot; &quot;our,&quot; or &quot;the Protocol&quot;). This Privacy Policy explains how we collect, use, and protect information when you interact with our decentralized staking protocol.
+                        This Privacy Policy explains what information the RWAAN Staking Protocol (&quot;we,&quot; &quot;our,&quot; or &quot;the Protocol&quot;) collects and how it is used.
                     </p>
                     <p>
-                        As a decentralized protocol built on the BNB Chain, we are committed to protecting your privacy while providing transparent staking services.
+                        The Protocol is a set of smart contracts on BNB Chain. Staking activity — deposits, withdrawals, and referral links — is recorded permanently and publicly on that blockchain, independent of anything covered in this policy.
                     </p>
                 </section>
 
