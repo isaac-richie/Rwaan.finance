@@ -91,8 +91,11 @@ export function AurumFooter() {
       <div className="au-footer-top">
         <div className="au-footer-brand">
           <div className="au-footer-brandline">
-            <img src="/logo-rwaan.png" alt="RWAN" className="v2-brand-mark small" width={24} height={24} />
-            <strong>RWAN</strong>
+            <img src="/logo-rwaan.png" alt="RWAN" className="au-footer-logo" width={40} height={40} />
+            <div>
+              <strong>RWAN</strong>
+              <span className="au-footer-by">by <em>Rawli Analytics</em></span>
+            </div>
           </div>
           <p>Transparent, reserve-backed staking infrastructure on BNB Chain.</p>
           <div className="au-socials">
