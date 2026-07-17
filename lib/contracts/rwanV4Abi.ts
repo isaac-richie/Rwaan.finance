@@ -13,6 +13,20 @@ export const RWAN_V4_ABI = [
   { type: "function", name: "stakePlansLength", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
   { type: "function", name: "pendingRewards", inputs: [{ name: "positionId", type: "uint256" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
   { type: "function", name: "positionUnpaidRewards", inputs: [{ name: "positionId", type: "uint256" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "userPositions", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "uint256[]" }], stateMutability: "view" },
+  {
+    type: "function", name: "positions", inputs: [{ name: "", type: "uint256" }],
+    outputs: [
+      { name: "owner", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "startTime", type: "uint64" },
+      { name: "unlockTime", type: "uint64" },
+      { name: "lastClaimTime", type: "uint64" },
+      { name: "planId", type: "uint32" },
+      { name: "rewardClaimed", type: "uint256" },
+      { name: "withdrawn", type: "bool" },
+    ], stateMutability: "view",
+  },
   {
     type: "function", name: "stakePlans", inputs: [{ name: "", type: "uint256" }],
     outputs: [

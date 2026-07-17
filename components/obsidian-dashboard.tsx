@@ -30,6 +30,7 @@ import { ERC20_WRITE_ABI } from "@/lib/contracts/erc20WriteAbi";
 import { RWAN_V4_ABI, RWAN_V4_STAKING_ADDRESS } from "@/lib/contracts/rwanV4Abi";
 import { CountUp, Grain, Magnetic, Marquee, Reveal, Spotlight, Tilt } from "@/components/aurum-ui";
 import { AurumFooter } from "@/components/aurum-footer";
+import { MyPositions } from "@/components/staking/my-positions";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -233,6 +234,7 @@ export function ObsidianDashboard() {
     if (!canSubmit || !tokenRead.data || !address) return;
     await writeContractAsync({ address: tokenRead.data, abi: ERC20_WRITE_ABI, functionName: "approve", args: [contractAddress, stakeAmount] });
     await writeContractAsync({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), zeroAddress] });
+    window.dispatchEvent(new Event("rwan:staked"));
   };
 
   const featured = displayPlans[displayPlans.length - 1];
@@ -258,6 +260,7 @@ export function ObsidianDashboard() {
         <nav className="ob-nav-links" aria-label="Primary">
           <a href="#stake">Plans</a>
           <a href="#position">Stake</a>
+          <a href="#my-positions">Positions</a>
           <a href="#perks">Perks</a>
           <a href="#footer">Legal</a>
         </nav>
@@ -434,9 +437,12 @@ export function ObsidianDashboard() {
           </div>
         </section>
 
+        {/* ---------- Your positions ---------- */}
+        <MyPositions contractAddress={contractAddress} contractConfigured={contractConfigured} />
+
         {/* ---------- Perks ---------- */}
         <section id="perks" className="ob-section">
-          <div className="ob-ghost-num" aria-hidden="true">03</div>
+          <div className="ob-ghost-num" aria-hidden="true">04</div>
           <div className="ob-section-head">
             <Reveal><h2 className="ob-h2">What the 720-day tier <em>adds.</em></h2></Reveal>
             <Reveal delay={0.08}><p>On top of its 1.00% daily rate, the market plan carries marketplace credit and VIP eligibility.</p></Reveal>
