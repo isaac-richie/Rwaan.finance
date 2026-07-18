@@ -47,12 +47,13 @@ type Plan = {
 };
 
 const fallbackPlans: Plan[] = [
-  { id: "flex", days: 0, label: "Flex", rate: 0.1, tone: "quiet", note: "No lock" },
-  { id: "30", days: 30, label: "Sprint", rate: 0.2, tone: "quiet", note: "30 day lock" },
-  { id: "90", days: 90, label: "Quarter", rate: 0.3, tone: "quiet", note: "90 day lock" },
-  { id: "180", days: 180, label: "Season", rate: 0.5, tone: "signal", note: "180 day lock" },
-  { id: "360", days: 360, label: "Year", rate: 0.7, tone: "signal", note: "360 day lock" },
-  { id: "720", days: 720, label: "Marketplace", rate: 0.85, tone: "market", note: "VIP access tier" },
+  { id: "flex", days: 0, label: "Flex", rate: 0.03, tone: "quiet", note: "No lock" },
+  { id: "30", days: 30, label: "Sprint", rate: 0.07, tone: "quiet", note: "30 day lock" },
+  { id: "90", days: 90, label: "Quarter", rate: 0.12, tone: "quiet", note: "90 day lock" },
+  { id: "120", days: 120, label: "Term", rate: 0.14, tone: "quiet", note: "120 day lock" },
+  { id: "180", days: 180, label: "Season", rate: 0.18, tone: "signal", note: "180 day lock" },
+  { id: "360", days: 360, label: "Year", rate: 0.23, tone: "signal", note: "360 day lock" },
+  { id: "720", days: 720, label: "Marketplace", rate: 0.28, tone: "market", note: "VIP access tier" },
 ];
 
 const fmt = (value: number, digits = 2) =>
@@ -75,7 +76,7 @@ function YieldDial({ rate, days }: { rate: number; days: number }) {
   const R = 132;
   const C = 2 * Math.PI * R;
   const sweep = 0.72; // portion of the circle the gauge occupies
-  const progress = Math.min(rate / 1.0, 1); // scale vs 1% daily max
+  const progress = Math.min(rate / 0.3, 1); // scale vs 0.30%/day gauge max
 
   // toFixed keeps server/client SVG output identical (avoids hydration
   // mismatches from float precision drift).
@@ -316,8 +317,8 @@ export function ObsidianDashboard() {
             </h1>
             <motion.p className="ob-sub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.75, duration: 0.8 }}>
               Seven staking plans on BNB Chain, each with a fixed daily rate
-              and lock term set on-chain — from no-lock Flex at 0.10% to the
-              720-day tier at 1.00%.
+              and lock term set on-chain — from no-lock Flex at 0.03% to the
+              720-day tier at 0.28%.
             </motion.p>
             <motion.div className="ob-hero-cta" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.7, ease: EASE }}>
               <Magnetic strength={0.35}>
@@ -490,7 +491,7 @@ export function ObsidianDashboard() {
           <div className="ob-ghost-num" aria-hidden="true">04</div>
           <div className="ob-section-head">
             <Reveal><h2 className="ob-h2">What the 720-day tier <em>adds.</em></h2></Reveal>
-            <Reveal delay={0.08}><p>On top of its 1.00% daily rate, the market plan carries marketplace credit and VIP eligibility.</p></Reveal>
+            <Reveal delay={0.08}><p>On top of its 0.28% daily rate, the market plan carries marketplace credit and VIP eligibility.</p></Reveal>
           </div>
           <div className="ob-perks">
             {[

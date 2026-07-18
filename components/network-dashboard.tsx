@@ -295,8 +295,8 @@ export function NetworkDashboard() {
                 <Reveal><h2 className="ob-h2">Your referral <em>link.</em></h2></Reveal>
                 <Reveal delay={0.06}>
                   <p>
-                    Anyone who stakes through this link joins your L1 downline — you earn 20% affiliate
-                    commission on their stake, 15% on L2, and 14% on L3.
+                    Anyone who stakes through this link joins your L1 downline — you earn 5% affiliate
+                    commission on their stake, 3% on L2, and 2% on L3.
                   </p>
                 </Reveal>
               </div>
@@ -463,9 +463,9 @@ export function NetworkDashboard() {
               {/* Level breakdown */}
               <Reveal delay={0.08} className="ob-downline-levels">
                 {[
-                  { level: "L1 — Direct", count: network?.direct_members ?? 0, commission: "20%" },
-                  { level: "L2", count: network?.l2_members ?? 0, commission: "15%" },
-                  { level: "L3", count: network?.l3_members ?? 0, commission: "14%" },
+                  { level: "L1 — Direct", count: network?.direct_members ?? 0, commission: "5%" },
+                  { level: "L2", count: network?.l2_members ?? 0, commission: "3%" },
+                  { level: "L3", count: network?.l3_members ?? 0, commission: "2%" },
                 ].map((row) => (
                   <div key={row.level} className="ob-downline-row">
                     <span className="ob-tag">{row.level}</span>
