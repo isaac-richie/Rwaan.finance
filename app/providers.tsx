@@ -2,10 +2,15 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { createConfig, fallback, http } from "wagmi";
+import { fallback, http } from "wagmi";
 import { bsc } from "wagmi/chains";
 import { PrivyProvider } from "@privy-io/react-auth";
-import { WagmiProvider } from "@privy-io/wagmi";
+// IMPORTANT: createConfig MUST come from @privy-io/wagmi, not from wagmi.
+// Privy's version sets ssr:true, strips injected connectors, and disables
+// multiInjectedProviderDiscovery so Privy is the sole connection manager.
+// Using wagmi's createConfig makes wagmi fight Privy for control, which
+// desyncs useAccount() on client-side navigation (wallet appears to drop).
+import { WagmiProvider, createConfig } from "@privy-io/wagmi";
 
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
 
