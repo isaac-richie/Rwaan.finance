@@ -74,7 +74,7 @@ export function useCryptoPrices() {
     if (isMounted) {
       fetchPrices();
     }
-    const interval = setInterval(fetchPrices, 15_000);
+    const interval = setInterval(fetchPrices, 60_000);
     return () => {
       isMounted = false;
       clearInterval(interval);

@@ -42,14 +42,14 @@ export function PriceTicker() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/prices", { next: { revalidate: 30 } });
+        const res = await fetch("/api/prices", { next: { revalidate: 60 } });
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) setPrices(data);
       } catch {}
     }
     load();
-    const id = setInterval(load, 30_000);
+    const id = setInterval(load, 60_000);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 

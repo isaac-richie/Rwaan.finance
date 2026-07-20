@@ -93,7 +93,7 @@ export function MyPositions({
   const idsRead = useReadContract({
     address: contractAddress, abi: RWAN_V5_ABI, functionName: "userPositions",
     args: address ? [address] : undefined,
-    query: { enabled, refetchInterval: 20_000 },
+    query: { enabled, refetchInterval: 60_000 },
   });
   const ids = useMemo(() => [...(idsRead.data ?? [])], [idsRead.data]);
 
@@ -101,13 +101,13 @@ export function MyPositions({
     contracts: ids.map((id) => ({
       address: contractAddress, abi: RWAN_V5_ABI, functionName: "positions" as const, args: [id] as const,
     })),
-    query: { enabled: enabled && ids.length > 0, refetchInterval: 20_000 },
+    query: { enabled: enabled && ids.length > 0, refetchInterval: 60_000 },
   });
   const pendingRead = useReadContracts({
     contracts: ids.map((id) => ({
       address: contractAddress, abi: RWAN_V5_ABI, functionName: "pendingRewards" as const, args: [id] as const,
     })),
-    query: { enabled: enabled && ids.length > 0, refetchInterval: 20_000 },
+    query: { enabled: enabled && ids.length > 0, refetchInterval: 60_000 },
   });
   const pausedRead = useReadContracts({
     contracts: [

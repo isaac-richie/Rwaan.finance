@@ -18,7 +18,12 @@ const wagmiConfig = createConfig({
   chains: [bsc],
   transports: {
     [bsc.id]: fallback([
-      http("/api/rpc", { retryCount: 1, retryDelay: 1_000, timeout: 15_000 }),
+      http("/api/rpc", {
+        retryCount: 1,
+        retryDelay: 1_000,
+        timeout: 15_000,
+        batch: { batchSize: 100, wait: 16 },
+      }),
     ]),
   },
 });

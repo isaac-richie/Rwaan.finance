@@ -97,6 +97,15 @@ export const RWAN_V5_ABI = [
       { name: "referrer", type: "address", indexed: true },
     ],
   },
+  {
+    type: "event", name: "AffiliateRewardPaid",
+    inputs: [
+      { name: "referrer", type: "address", indexed: true },
+      { name: "user", type: "address", indexed: true },
+      { name: "level", type: "uint256", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
 ] as const;
 
 export const RWAN_V5_STAKING_ADDRESS =

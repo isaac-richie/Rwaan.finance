@@ -223,7 +223,7 @@ export function ObsidianDashboard() {
     abi: ERC20_WRITE_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: !!tokenRead.data && !!address, refetchInterval: 15_000 },
+    query: { enabled: !!tokenRead.data && !!address, refetchInterval: 60_000 },
   });
   const walletBalance = balanceRead.data ?? 0n;
 
