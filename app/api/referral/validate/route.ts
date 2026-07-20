@@ -54,29 +54,55 @@ export async function GET(request: Request) {
 
   const staking =
     process.env.RWAN_V5_STAKING_ADDRESS || process.env.NEXT_PUBLIC_RWAN_V5_STAKING_ADDRESS;
-  const rpc = process.env.BSC_ALCHEMY_RPC_URL || process.env.BSC_RPC_URL;
 
-  if (!staking || !rpc) {
+  // Try every configured endpoint in turn. `||` is not enough: a key that is
+  // present but rate-capped (Alchemy 429) is truthy, so it would be picked and
+  // never fall through — silently dropping every referral. We must actually
+  // retry on error, ending at the public BSC node which has no cap.
+  const endpoints = [
+    process.env.BSC_ALCHEMY_RPC_URL,
+    process.env.BSC_ALCHEMY_RPC_URL2,
+    process.env.BSC_ALCHEMY_RPC_URL3,
+    process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
+    process.env.BSC_RPC_URL,
+    "https://bsc-dataseed.binance.org/",
+  ].filter((u): u is string => Boolean(u));
+
+  if (!staking || endpoints.length === 0) {
     return NextResponse.json({ valid: false, reason: "referral check unavailable" });
   }
 
-  try {
-    const client = createPublicClient({ chain: bsc, transport: http(rpc) });
-    const staked = (await client.readContract({
-      address: getAddress(staking),
-      abi: STAKING_ABI,
-      functionName: "totalUserStaked",
-      args: [getAddress(wallet)],
-    })) as bigint;
-
-    if (staked === 0n) {
-      return NextResponse.json({ valid: false, reason: "referrer has no active stake" });
+  let staked: bigint | null = null;
+  for (const rpc of endpoints) {
+    try {
+      // Fail fast per endpoint: no retries and a short timeout, so a capped or
+      // slow endpoint is abandoned in ~1 attempt rather than burning seconds of
+      // backoff before we fall through to the next one.
+      const client = createPublicClient({
+        chain: bsc,
+        transport: http(rpc, { retryCount: 0, timeout: 4_000 }),
+      });
+      staked = (await client.readContract({
+        address: getAddress(staking),
+        abi: STAKING_ABI,
+        functionName: "totalUserStaked",
+        args: [getAddress(wallet)],
+      })) as bigint;
+      break; // got a definitive answer — stop trying endpoints
+    } catch {
+      // this endpoint errored (cap/timeout) — fall through to the next
     }
-  } catch {
-    // Never fail open on an RPC hiccup — an unverified referrer must not be
-    // stored, but say so explicitly so the caller can distinguish this from
-    // a genuine "not a staker" rejection.
+  }
+
+  // Never fail open: if no endpoint answered, treat as unverified rather than
+  // storing an unchecked referrer. Distinct reason so the caller can tell this
+  // apart from a genuine "not a staker".
+  if (staked === null) {
     return NextResponse.json({ valid: false, reason: "referral check unavailable" });
+  }
+
+  if (staked === 0n) {
+    return NextResponse.json({ valid: false, reason: "referrer has no active stake" });
   }
 
   return NextResponse.json({ valid: true });
