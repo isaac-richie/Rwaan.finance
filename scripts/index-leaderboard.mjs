@@ -15,13 +15,13 @@
  *
  *   node scripts/index-leaderboard.mjs
  */
-import { createPublicClient, http, parseAbiItem, getAddress } from "viem";
+import { createPublicClient, http, parseAbiItem, parseEventLogs, getAddress } from "viem";
 import { createClient } from "@supabase/supabase-js";
 
-const RPC = process.env.LEADERBOARD_RPC_URL || process.env.BSC_TESTNET_RPC_URL;
+const RPC = process.env.BSC_ALCHEMY_RPC_URL || process.env.LEADERBOARD_RPC_URL || process.env.BSC_TESTNET_RPC_URL;
 const STAKING = process.env.RWAN_V5_STAKING_ADDRESS;
 const DEPLOY_BLOCK = BigInt(process.env.RWAN_V5_DEPLOY_BLOCK || "0");
-const CHUNK = 4_000n; // public RPCs cap getLogs ranges; stay conservative
+const CHUNK = BigInt(process.env.INDEX_CHUNK_SIZE || "10000"); // Alchemy handles large ranges
 const STATE_ID = "leaderboard";
 
 if (!RPC || !STAKING) throw new Error("Set LEADERBOARD_RPC_URL and RWAN_V5_STAKING_ADDRESS");
@@ -93,15 +93,23 @@ async function main() {
     return statDeltas.get(k);
   };
 
-  // 2) scan in chunks
+  const ABI = Object.values(EVENTS);
+
+  // 2) scan in chunks — fetch raw logs by address only (no topic filter)
+  //    to avoid BSC public node limits on large topic arrays, then decode.
+  const totalChunks = Number((head - from) / CHUNK) + 1;
+  let chunkIdx = 0;
   for (let start = from; start <= head; start += CHUNK) {
+    chunkIdx++;
     const end = start + CHUNK - 1n > head ? head : start + CHUNK - 1n;
-    const logs = await client.getLogs({
+    if (chunkIdx % 5 === 1) console.log(`  chunk ${chunkIdx}/${totalChunks} — blocks ${start}..${end}`);
+    const rawLogs = await client.getLogs({
       address,
-      events: Object.values(EVENTS),
       fromBlock: start,
       toBlock: end,
     });
+    const logs = parseEventLogs({ abi: ABI, logs: rawLogs, strict: false })
+      .filter((l) => l.eventName);
     // stable order: block then logIndex
     logs.sort((a, b) =>
       a.blockNumber === b.blockNumber
