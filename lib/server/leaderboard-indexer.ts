@@ -113,7 +113,7 @@ export async function runLeaderboardIndex(): Promise<IndexResult> {
   let client: ReturnType<typeof createPublicClient> | null = null;
   for (const rpc of logEndpoints) {
     try {
-      const c = createPublicClient({ transport: http(rpc, { retryCount: 0, timeout: 5_000 }) });
+      const c = createPublicClient({ transport: http(rpc, { retryCount: 0, timeout: 15_000 }) });
       const h = await c.getBlockNumber();
       if (h > cursor) {
         client = c;
