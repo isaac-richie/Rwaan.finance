@@ -23,11 +23,9 @@ import {
   Network,
   ShieldCheck,
   Wallet,
-  Zap,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
-import { WalletButton } from "@/components/wallet-button";
 import { ERC20_WRITE_ABI } from "@/lib/contracts/erc20WriteAbi";
 import { RWAN_V5_ABI, RWAN_V5_STAKING_ADDRESS } from "@/lib/contracts/rwanV5Abi";
 import { CountUp, Grain, Magnetic, Marquee, Reveal, Spotlight, Tilt } from "@/components/aurum-ui";
@@ -281,11 +279,6 @@ export function ObsidianDashboard() {
       <ScrollProgress />
       <div className="ob-atmo" aria-hidden="true" />
 
-      {/* ---------- Topline ---------- */}
-      <div className="ob-topline">
-        <span className="ob-top-item"><span className="ob-live" /> {contractConfigured ? "Live" : "Pending"}</span>
-      </div>
-
       {/* ---------- Nav ---------- */}
       <ObNav />
 
@@ -340,14 +333,14 @@ export function ObsidianDashboard() {
         </Reveal>
 
         {/* ---------- Bento widgets ---------- */}
-        <section className="ob-bento" aria-label="Protocol metrics">
+        <section className="ob-bento ob-bento-3" aria-label="Protocol metrics">
           <Reveal className="ob-card ob-card-tvl">
             <div className="ob-card-head">
               <span className="ob-tag"><Layers3 className="h-3.5 w-3.5" /> Total value locked</span>
             </div>
             <div className="ob-card-metric">{tvl != null ? <CountUp value={tvl} suffix=" RWAAN" /> : "— RWAAN"}</div>
             <Sparkline />
-            <span className="ob-card-note">{contractConfigured ? "Live contract read" : "Awaiting deployment"}</span>
+            {!contractConfigured && <span className="ob-card-note">Awaiting deployment</span>}
           </Reveal>
 
           <Reveal className="ob-card" delay={0.07}>
@@ -362,14 +355,9 @@ export function ObsidianDashboard() {
             <div className="ob-card-metric">
               {address ? "View network" : "—"}
             </div>
-            <span className="ob-card-note">{address ? "Referral earnings — view downline" : "Affiliate levels & rank rules on-chain"}</span>
+            <span className="ob-card-note">2% on every referral claim</span>
           </Reveal>
 
-          <Reveal className="ob-card" delay={0.21}>
-            <div className="ob-card-head"><span className="ob-tag"><Zap className="h-3.5 w-3.5" /> Contract state</span></div>
-            <div className="ob-card-metric">{contractConfigured ? "Live" : "Pending"}</div>
-            <span className="ob-card-note">No off-chain reward promises</span>
-          </Reveal>
         </section>
 
         {/* ---------- Plans ---------- */}
@@ -377,7 +365,7 @@ export function ObsidianDashboard() {
           <div className="ob-ghost-num" aria-hidden="true">01</div>
           <div className="ob-section-head">
             <Reveal><h2 className="ob-h2">Pick your <em>lock term.</em></h2></Reveal>
-            <Reveal delay={0.08}><p>Every plan&apos;s rate, lock length, and early-exit penalty is set in the contract and loads live below.</p></Reveal>
+            <Reveal delay={0.08}><p>Every plan&apos;s rate, lock length, and early-exit penalty is set in the contract.</p></Reveal>
           </div>
           <div className="ob-plans">
             {displayPlans.map((item, index) => (

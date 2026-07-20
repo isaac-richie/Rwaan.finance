@@ -79,19 +79,21 @@ export function ObNav({ currentPage }: { currentPage?: string }) {
         )}
       </nav>
 
-      <button
-        type="button"
-        className="ob-menu-toggle"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-label={open ? "Close menu" : "Open menu"}
-      >
-        {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </button>
+      <div className="ob-nav-actions">
+        <button
+          type="button"
+          className="ob-menu-toggle"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-label={open ? "Close menu" : "Open menu"}
+        >
+          {open ? <X className="h-[18px] w-[18px]" /> : <Menu className="h-[18px] w-[18px]" />}
+        </button>
 
-      <Magnetic strength={0.25}>
-        <WalletButton />
-      </Magnetic>
+        <Magnetic strength={0.25}>
+          <WalletButton />
+        </Magnetic>
+      </div>
 
       {open && (
         <nav className="ob-mobile-menu" aria-label="Mobile navigation">

@@ -23,7 +23,6 @@ import { RWAN_V5_ABI, RWAN_V5_STAKING_ADDRESS } from "@/lib/contracts/rwanV5Abi"
 import { CountUp, Grain, Magnetic, Reveal, Spotlight } from "@/components/aurum-ui";
 import { AurumFooter } from "@/components/aurum-footer";
 import { ObNav } from "@/components/ob-nav";
-import { WalletButton } from "@/components/wallet-button";
 import { buildReferralLink } from "@/lib/utils/referral";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -226,11 +225,6 @@ export function NetworkDashboard() {
       <div className="ob-atmo" aria-hidden="true" />
 
       {/* ── Nav ── */}
-      <div className="ob-topline">
-        <span className="ob-top-item">
-          <span className="ob-live" /> Live
-        </span>
-      </div>
       <ObNav currentPage="network" />
 
       <main>
@@ -246,7 +240,7 @@ export function NetworkDashboard() {
               <h1 className="ob-h2">Your <em>network.</em></h1>
             </Reveal>
             <Reveal delay={0.08}>
-              <p>Downline depth, team stake, and milestone progress — all live from the contract.</p>
+              <p>Downline depth, team stake, and milestone progress.</p>
             </Reveal>
           </div>
         </section>
@@ -306,7 +300,7 @@ export function NetworkDashboard() {
                 <span className="ob-card-note">
                   {network
                     ? `${network.direct_members} direct referral${network.direct_members !== 1 ? "s" : ""}`
-                    : "Direct referrals counted"}
+                    : ""}
                 </span>
               </Reveal>
             </section>
