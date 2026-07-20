@@ -2293,6 +2293,53 @@ img.v2-brand-mark {
   transition: color 180ms ease, background 180ms ease;
 }
 .ob-nav-links a:hover { color: var(--ob-ink); background: rgba(255, 255, 255, 0.05); }
+
+/* ── Hamburger toggle (hidden on desktop) ── */
+.ob-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  margin-left: auto;
+  border: 1px solid var(--ob-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ob-mut);
+  cursor: pointer;
+  transition: color 180ms ease, background 180ms ease;
+}
+.ob-menu-toggle:hover { color: var(--ob-ink); background: rgba(255, 255, 255, 0.08); }
+
+/* ── Mobile dropdown menu ── */
+.ob-mobile-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0; right: 0;
+  flex-direction: column;
+  padding: 8px;
+  border: 1px solid var(--ob-line);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(24, 21, 12, 0.95), rgba(12, 11, 6, 0.92));
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.8);
+  z-index: 100;
+}
+.ob-mobile-link {
+  display: block;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-size: 14px; font-weight: 600;
+  color: var(--ob-mut);
+  text-decoration: none;
+  transition: color 150ms ease, background 150ms ease;
+}
+.ob-mobile-link:hover,
+.ob-mobile-link[aria-current="page"] {
+  color: var(--ob-ink);
+  background: rgba(255, 255, 255, 0.06);
+}
 .ob-wallet {
   display: inline-flex; align-items: center; gap: 9px;
   min-height: 42px; padding: 0 19px;
@@ -2902,6 +2949,8 @@ img.v2-brand-mark {
   .ob-hero-widget { max-width: 480px; }
   .ob-builder { grid-template-columns: 1fr; }
   .ob-nav-links { display: none; }
+  .ob-menu-toggle { display: flex; }
+  .ob-mobile-menu { display: flex; }
   .ob-pos-summary { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
@@ -3381,6 +3430,18 @@ html, body {
   font-size: 12px; color: var(--ob-dim);
 }
 .ob-referral-upline code { color: var(--ob-gold-hi); font-family: var(--font-space), monospace; }
+
+.ob-referral-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 10px;
+  text-align: center;
+  color: var(--ob-dim);
+  font-size: 13.5px;
+}
+.ob-referral-locked svg { color: var(--ob-mut); opacity: 0.6; }
 
 /* Rank card */
 .ob-rank-card {

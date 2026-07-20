@@ -32,6 +32,7 @@ import { ERC20_WRITE_ABI } from "@/lib/contracts/erc20WriteAbi";
 import { RWAN_V5_ABI, RWAN_V5_STAKING_ADDRESS } from "@/lib/contracts/rwanV5Abi";
 import { CountUp, Grain, Magnetic, Marquee, Reveal, Spotlight, Tilt } from "@/components/aurum-ui";
 import { AurumFooter } from "@/components/aurum-footer";
+import { ObNav } from "@/components/ob-nav";
 import { MyPositions } from "@/components/staking/my-positions";
 import { captureReferrerFromUrl, getStoredReferrer } from "@/lib/utils/referral";
 
@@ -286,23 +287,7 @@ export function ObsidianDashboard() {
       </div>
 
       {/* ---------- Nav ---------- */}
-      <header className="ob-nav">
-        <a href="#top" className="ob-brand">
-          <img src="/logo-rwaan.png" alt="Rawli Analytics" className="ob-brand-mark" width={34} height={34} />
-          <span className="ob-brand-name">Rawli Analytics</span>
-        </a>
-        <nav className="ob-nav-links" aria-label="Primary">
-          <a href="#stake">Plans</a>
-          <a href="#position">Stake</a>
-          <a href="#my-positions">Positions</a>
-          <Link href="/network">Network</Link>
-          <a href="#perks">Perks</a>
-          <a href="#footer">Legal</a>
-        </nav>
-        <Magnetic strength={0.25}>
-          <WalletButton />
-        </Magnetic>
-      </header>
+      <ObNav />
 
       <main id="top">
         {/* ---------- Hero ---------- */}

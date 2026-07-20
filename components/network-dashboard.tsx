@@ -10,6 +10,7 @@ import {
   Check,
   Copy,
   Link2,
+  LockKeyhole,
   Network,
   ShieldCheck,
   Star,
@@ -21,6 +22,7 @@ import {
 import { RWAN_V5_ABI, RWAN_V5_STAKING_ADDRESS } from "@/lib/contracts/rwanV5Abi";
 import { CountUp, Grain, Magnetic, Reveal, Spotlight } from "@/components/aurum-ui";
 import { AurumFooter } from "@/components/aurum-footer";
+import { ObNav } from "@/components/ob-nav";
 import { WalletButton } from "@/components/wallet-button";
 import { buildReferralLink } from "@/lib/utils/referral";
 
@@ -59,6 +61,7 @@ interface NetworkData {
   big_leg: { wallet: string; volume: string; sub_members: number } | null;
   small_leg_volume: string;
   small_leg_count: number;
+  referral_earned: string;
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -228,23 +231,7 @@ export function NetworkDashboard() {
           <span className="ob-live" /> Live
         </span>
       </div>
-      <header className="ob-nav">
-        <Link href="/" className="ob-brand">
-          <img src="/logo-rwaan.png" alt="Rawli Analytics" className="ob-brand-mark" width={34} height={34} />
-          <span className="ob-brand-name">Rawli Analytics</span>
-        </Link>
-        <nav className="ob-nav-links" aria-label="Primary">
-          <Link href="/#stake">Plans</Link>
-          <Link href="/#position">Stake</Link>
-          <Link href="/#my-positions">Positions</Link>
-          <Link href="/network" aria-current="page">Network</Link>
-          <Link href="/#perks">Perks</Link>
-          <Link href="/#footer">Legal</Link>
-        </nav>
-        <Magnetic strength={0.25}>
-          <WalletButton />
-        </Magnetic>
-      </header>
+      <ObNav currentPage="network" />
 
       <main>
         {/* ── Page header ── */}
@@ -300,9 +287,15 @@ export function NetworkDashboard() {
               </Reveal>
 
               <Reveal className="ob-card" delay={0.14}>
-                <div className="ob-card-head"><span className="ob-tag"><Zap className="h-3.5 w-3.5" /> Affiliate Rewards</span></div>
-                <div className="ob-card-metric">Paid to wallet</div>
-                <span className="ob-card-note">Commissions sent on every stake</span>
+                <div className="ob-card-head"><span className="ob-tag"><Zap className="h-3.5 w-3.5" /> Affiliate Earned</span></div>
+                <div className="ob-card-metric">
+                  {networkLoading
+                    ? "…"
+                    : network?.referral_earned
+                      ? <CountUp value={Number(formatUnits(BigInt(network.referral_earned), 18))} suffix=" RWAAN" decimals={2} />
+                      : "0.00 RWAAN"}
+                </div>
+                <span className="ob-card-note">2% commission paid to wallet on every claim</span>
               </Reveal>
 
               <Reveal className="ob-card" delay={0.21}>
@@ -325,39 +318,51 @@ export function NetworkDashboard() {
                 <Reveal><h2 className="ob-h2">Your referral <em>link.</em></h2></Reveal>
                 <Reveal delay={0.06}>
                   <p>
-                    Anyone who stakes through this link becomes your direct referral — you earn a
-                    one-time 2% affiliate payout on their staked amount, paid instantly in RWAAN.
+                    Anyone who stakes through this link becomes your direct referral — you earn
+                    2% of every reward they claim, paid instantly to your wallet in RWAAN.
                   </p>
                 </Reveal>
               </div>
 
-              <Reveal className="ob-referral-card">
-                <div className="ob-referral-row">
-                  <Link2 className="ob-referral-icon" />
-                  <input
-                    readOnly
-                    value={referralLink}
-                    onFocus={(e) => e.currentTarget.select()}
-                    className="ob-referral-input"
-                    aria-label="Your referral link"
-                  />
-                  <Magnetic strength={0.2}>
-                    <button
-                      type="button"
-                      onClick={handleCopyLink}
-                      className={`ob-btn-gold ob-copy-btn ${copied ? "ob-copy-btn-done" : ""}`}
-                    >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {copied ? "Copied!" : "Copy"}
-                    </button>
-                  </Magnetic>
-                </div>
-                {uplineDisplay && (
-                  <p className="ob-referral-upline">
-                    Your referrer: <code>{uplineDisplay}</code>
-                  </p>
-                )}
-              </Reveal>
+              {personalStake != null && personalStake > 0n ? (
+                <Reveal className="ob-referral-card">
+                  <div className="ob-referral-row">
+                    <Link2 className="ob-referral-icon" />
+                    <input
+                      readOnly
+                      value={referralLink}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="ob-referral-input"
+                      aria-label="Your referral link"
+                    />
+                    <Magnetic strength={0.2}>
+                      <button
+                        type="button"
+                        onClick={handleCopyLink}
+                        className={`ob-btn-gold ob-copy-btn ${copied ? "ob-copy-btn-done" : ""}`}
+                      >
+                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {copied ? "Copied!" : "Copy"}
+                      </button>
+                    </Magnetic>
+                  </div>
+                  {uplineDisplay && (
+                    <p className="ob-referral-upline">
+                      Your referrer: <code>{uplineDisplay}</code>
+                    </p>
+                  )}
+                </Reveal>
+              ) : (
+                <Reveal className="ob-referral-card">
+                  <div className="ob-referral-locked">
+                    <LockKeyhole className="h-5 w-5" />
+                    <p>You need an active staking position to unlock your referral link.</p>
+                    <Link href="/#stake" className="ob-btn-gold" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "10px 20px", fontSize: "13px" }}>
+                      <Zap className="h-4 w-4" /> Stake now
+                    </Link>
+                  </div>
+                </Reveal>
+              )}
             </section>
 
             {/* ── Milestone card ── */}

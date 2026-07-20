@@ -60,6 +60,13 @@ export async function GET(request: Request) {
     .eq("wallet", wallet)
     .maybeSingle();
 
+  // Affiliate earnings from leaderboard stats
+  const { data: lbStats } = await supabaseAdmin
+    .from("leaderboard_stats")
+    .select("referral_earned")
+    .eq("wallet", wallet)
+    .maybeSingle();
+
   // Build L1 with their sub-member counts
   const l2ByReferrer: Record<string, typeof l2Members> = {};
   for (const m of l2Members) {
@@ -105,5 +112,6 @@ export async function GET(request: Request) {
     small_leg_volume: smallLegVolume.toString(),
     small_leg_count: smallLegs.length,
     stats: stats ?? null,
+    referral_earned: lbStats?.referral_earned ?? "0",
   });
 }
