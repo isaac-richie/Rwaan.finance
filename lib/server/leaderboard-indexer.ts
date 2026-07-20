@@ -82,11 +82,13 @@ export async function runLeaderboardIndex(): Promise<IndexResult> {
   // Alchemy endpoints support eth_getLogs with large block ranges.
   // The public BSC node does NOT — it rejects getLogs even for tiny ranges.
   // So we only use Alchemy endpoints for actual log scanning.
+  // Only Alchemy endpoints support eth_getLogs with large block ranges.
+  // LEADERBOARD_RPC_URL / public BSC nodes reject getLogs entirely — never
+  // include them here even as a fallback.
   const logEndpoints = [
     process.env.BSC_ALCHEMY_RPC_URL,
     process.env.BSC_ALCHEMY_RPC_URL2,
     process.env.BSC_ALCHEMY_RPC_URL3,
-    process.env.LEADERBOARD_RPC_URL,
   ].filter((u): u is string => Boolean(u));
 
   const staking =
