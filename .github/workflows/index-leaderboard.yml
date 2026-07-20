@@ -30,14 +30,14 @@ jobs:
       - name: Trigger indexer
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          SITE_URL: ${{ vars.SITE_URL || 'https://rawli.finance' }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://www.rawli.finance' }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "CRON_SECRET not set — skipping (add it in repo Settings > Secrets)."
             exit 0
           fi
 
-          response=$(curl -sS --max-time 120 -w '\n%{http_code}' \
+          response=$(curl -sSL --max-time 120 -w '\n%{http_code}' \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$SITE_URL/api/cron/index-leaderboard")
 
