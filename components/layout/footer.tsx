@@ -134,7 +134,7 @@ export function Footer() {
                 </span>
               </div>
               <p className="text-[13px] leading-relaxed text-white/25 max-w-xs">
-                The premier staking protocol on BNB Smart Chain. Stake with confidence, earn premium yield, grow your portfolio.
+                The premier staking protocol. Stake with confidence, earn premium yield, grow your portfolio.
               </p>
               <div className="flex items-center gap-2.5">
                 <SocialIcon href="https://x.com/RWAN_Official" label="$Rwaan on X">
@@ -225,12 +225,7 @@ export function Footer() {
             <span className="text-[11px] text-white/15">
               &copy; 2026 $Rwaan Protocol. All rights reserved.
             </span>
-            <div className="flex items-center gap-2">
-              <span className="flex h-1.5 w-1.5 rounded-full bg-[#F3BA2F]/50" />
-              <span className="text-[11px] font-medium text-white/25">
-                Built on BNB Chain
-              </span>
-            </div>
+            <div className="flex items-center gap-2" />
           </div>
         </div>
       </div>

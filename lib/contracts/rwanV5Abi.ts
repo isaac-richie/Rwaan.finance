@@ -1,8 +1,7 @@
 import type { Address } from "viem";
 
-// V4 surface used by the public staking terminal. Keep this intentionally small
-// so the UI cannot drift into admin-only or legacy V3 methods.
-export const RWAN_V4_ABI = [
+// V5 surface used by the public staking terminal + network page.
+export const RWAN_V5_ABI = [
   { type: "function", name: "stakingToken", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
   { type: "function", name: "minStakeAmount", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
   { type: "function", name: "stakingPaused", inputs: [], outputs: [{ type: "bool" }], stateMutability: "view" },
@@ -53,45 +52,52 @@ export const RWAN_V4_ABI = [
   { type: "function", name: "withdraw", inputs: [{ name: "positionId", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
   { type: "function", name: "withdrawEarly", inputs: [{ name: "positionId", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
   { type: "function", name: "claimMarketplaceCredit", inputs: [{ name: "positionId", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
-  // ── Network / downline reads ────────────────────────────────────────
+  // ── Network / referral reads ────────────────────────────────────────
   { type: "function", name: "referrerOf", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "address" }], stateMutability: "view" },
   { type: "function", name: "teamStake", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
   { type: "function", name: "totalUserStaked", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  // affiliateEarned not in V4 — commissions are pushed directly to wallet on every stake
+  // ── Milestone system ────────────────────────────────────────────────
+  { type: "function", name: "milestonesCount", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
   {
-    type: "function", name: "userRanks",
-    inputs: [{ name: "user", type: "address" }],
+    type: "function", name: "milestones", inputs: [{ name: "milestoneId", type: "uint256" }],
     outputs: [
-      { name: "rankId", type: "uint32" },
-      { name: "accrued", type: "uint256" },
-      { name: "lastUpdate", type: "uint256" },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function", name: "rankConfigs",
-    inputs: [{ name: "rankId", type: "uint256" }],
-    outputs: [
-      { name: "minPersonalStake", type: "uint256" },
       { name: "minTeamStake", type: "uint256" },
-      { name: "weightBps", type: "uint32" },
+      { name: "reward", type: "uint256" },
       { name: "enabled", type: "bool" },
-    ],
-    stateMutability: "view",
+    ], stateMutability: "view",
   },
-  { type: "function", name: "rankConfigsLength", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  // ── Staked event for indexing downline members ──────────────────────
+  { type: "function", name: "milestoneClaimed", inputs: [{ name: "user", type: "address" }, { name: "milestoneId", type: "uint256" }], outputs: [{ type: "bool" }], stateMutability: "view" },
+  { type: "function", name: "pendingMilestones", inputs: [{ name: "user", type: "address" }], outputs: [{ type: "uint256[]" }], stateMutability: "view" },
+  { type: "function", name: "claimMilestone", inputs: [{ name: "milestoneId", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "claimMultipleMilestones", inputs: [{ name: "milestoneIds", type: "uint256[]" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "rankRewardReserve", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  // ── Events for indexing ─────────────────────────────────────────────
   {
-    type: "event", name: "Staked",
+    type: "event", name: "PositionCreated",
     inputs: [
       { name: "user", type: "address", indexed: true },
       { name: "positionId", type: "uint256", indexed: true },
       { name: "amount", type: "uint256", indexed: false },
-      { name: "planId", type: "uint256", indexed: false },
-      { name: "referrer", type: "address", indexed: false },
+      { name: "planId", type: "uint32", indexed: true },
+      { name: "unlockTime", type: "uint64", indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "MilestoneClaimed",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "milestoneId", type: "uint256", indexed: true },
+      { name: "reward", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "ReferrerSet",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "referrer", type: "address", indexed: true },
     ],
   },
 ] as const;
 
-export const RWAN_V4_STAKING_ADDRESS =
-  process.env.NEXT_PUBLIC_RWAN_V4_STAKING_ADDRESS as Address | undefined;
+export const RWAN_V5_STAKING_ADDRESS =
+  process.env.NEXT_PUBLIC_RWAN_V5_STAKING_ADDRESS as Address | undefined;

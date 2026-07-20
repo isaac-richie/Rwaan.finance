@@ -23,7 +23,7 @@ import {
 
 import { cn } from "@/lib/utils/cn";
 import { ERC20_WRITE_ABI } from "@/lib/contracts/erc20WriteAbi";
-import { RWAN_V4_ABI, RWAN_V4_STAKING_ADDRESS } from "@/lib/contracts/rwanV4Abi";
+import { RWAN_V5_ABI, RWAN_V5_STAKING_ADDRESS } from "@/lib/contracts/rwanV5Abi";
 import {
   CountUp,
   Grain,
@@ -107,22 +107,22 @@ export function V2Dashboard() {
   const [amount, setAmount] = useState("");
   const [activeNav, setActiveNav] = useState("Overview");
 
-  const contractAddress = RWAN_V4_STAKING_ADDRESS ?? zeroAddress;
-  const contractConfigured = Boolean(RWAN_V4_STAKING_ADDRESS && RWAN_V4_STAKING_ADDRESS !== zeroAddress);
+  const contractAddress = RWAN_V5_STAKING_ADDRESS ?? zeroAddress;
+  const contractConfigured = Boolean(RWAN_V5_STAKING_ADDRESS && RWAN_V5_STAKING_ADDRESS !== zeroAddress);
   const planCount = useReadContract({
-    address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakePlansLength",
+    address: contractAddress, abi: RWAN_V5_ABI, functionName: "stakePlansLength",
     query: { enabled: contractConfigured, refetchInterval: 60_000 },
   });
   const planReads = useReadContracts({
     contracts: Array.from({ length: Math.min(Number(planCount.data ?? 0), 32) }, (_, index) => ({
-      address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakePlans" as const, args: [BigInt(index)] as const,
+      address: contractAddress, abi: RWAN_V5_ABI, functionName: "stakePlans" as const, args: [BigInt(index)] as const,
     })),
     query: { enabled: contractConfigured && Number(planCount.data ?? 0) > 0, refetchInterval: 60_000 },
   });
-  const tokenRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakingToken", query: { enabled: contractConfigured } });
-  const minStakeRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "minStakeAmount", query: { enabled: contractConfigured } });
-  const totalStakedRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "totalStaked", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
-  const rewardReserveRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakingRewardReserve", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
+  const tokenRead = useReadContract({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "stakingToken", query: { enabled: contractConfigured } });
+  const minStakeRead = useReadContract({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "minStakeAmount", query: { enabled: contractConfigured } });
+  const totalStakedRead = useReadContract({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "totalStaked", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
+  const rewardReserveRead = useReadContract({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "stakingRewardReserve", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
 
   const livePlans = useMemo(() => planReads.data?.flatMap((item, index) => {
     const result = item.result as readonly [bigint, bigint, bigint, boolean] | undefined;
@@ -149,7 +149,7 @@ export function V2Dashboard() {
   const handleStake = async () => {
     if (!canSubmit || !tokenRead.data || !address) return;
     await writeContractAsync({ address: tokenRead.data, abi: ERC20_WRITE_ABI, functionName: "approve", args: [contractAddress, stakeAmount] });
-    await writeContractAsync({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), zeroAddress] });
+    await writeContractAsync({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), zeroAddress] });
   };
 
   const activeCopy = useMemo(() => {
@@ -167,9 +167,7 @@ export function V2Dashboard() {
       <div className="v2-topline">
         <div className="flex items-center gap-2">
           <span className="v2-live-dot" />
-          <span>{contractConfigured ? "V4 protocol connected" : "V4 deployment pending"}</span>
-          <span className="hidden text-white/20 sm:inline">/</span>
-          <span className="hidden text-white/40 sm:inline">BNB Smart Chain</span>
+          <span>{contractConfigured ? "Protocol connected" : "Deployment pending"}</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="hidden sm:inline">RWAN / $30.00</span>
@@ -300,8 +298,6 @@ export function V2Dashboard() {
               <>·</>,
               <>Referral rank engine</>,
               <>·</>,
-              <>Built on BNB Chain</>,
-              <>·</>,
             ]}
           />
         </Reveal>
@@ -310,14 +306,14 @@ export function V2Dashboard() {
           <Metric
             label="Total value locked"
             value={tvl != null ? <CountUp value={tvl} suffix=" RWAN" /> : "—"}
-            detail={contractConfigured ? "Live V4 contract read" : "Awaiting V4 deployment"}
+            detail={contractConfigured ? "Live contract read" : "Awaiting deployment"}
             icon={Layers3}
             delay={0}
           />
           <Metric
             label="Reward reserve"
             value={reserve != null ? <CountUp value={reserve} suffix=" RWAN" /> : "—"}
-            detail={contractConfigured ? "Live staking reserve" : "Awaiting V4 deployment"}
+            detail={contractConfigured ? "Live staking reserve" : "Awaiting deployment"}
             icon={ShieldCheck}
             delay={0.08}
           />
@@ -330,7 +326,7 @@ export function V2Dashboard() {
           />
           <Metric
             label="Contract state"
-            value={contractConfigured ? "V4 live" : "Not deployed"}
+            value={contractConfigured ? "Live" : "Not deployed"}
             detail="No off-chain reward promises"
             icon={Zap}
             delay={0.24}
@@ -344,7 +340,7 @@ export function V2Dashboard() {
               <h2>Lock in a <em>rhythm.</em></h2>
             </Reveal>
             <Reveal delay={0.1}>
-              <p>Every plan has a defined rate, term, and exit path. No hidden math. Live values load from V4.</p>
+              <p>Every plan has a defined rate, term, and exit path. No hidden math. Live values load from the contract.</p>
             </Reveal>
           </div>
 

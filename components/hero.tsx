@@ -101,7 +101,7 @@ export function Hero() {
               className="text-sm leading-relaxed text-white/40 md:text-[15px] max-w-md"
             >
               Stake with confidence. Track every position, claim rewards precisely,
-              and unlock at your own pace on BNB Chain.
+              and unlock at your own pace.
             </motion.p>
 
             {/* CTA row */}

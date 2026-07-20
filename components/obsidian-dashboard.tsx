@@ -3,7 +3,7 @@
 /**
  * OBSIDIAN — RWAAN private terminal.
  * A ground-up presentation rebuild (ob-* namespace) on top of the same
- * V4 contract logic. Design pillars: kinetic editorial type, one hero
+ * V5 contract logic. Design pillars: kinetic editorial type, one hero
  * widget (animated yield dial), bento stat widgets, disciplined spacing.
  */
 
@@ -29,7 +29,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { WalletButton } from "@/components/wallet-button";
 import { ERC20_WRITE_ABI } from "@/lib/contracts/erc20WriteAbi";
-import { RWAN_V4_ABI, RWAN_V4_STAKING_ADDRESS } from "@/lib/contracts/rwanV4Abi";
+import { RWAN_V5_ABI, RWAN_V5_STAKING_ADDRESS } from "@/lib/contracts/rwanV5Abi";
 import { CountUp, Grain, Magnetic, Marquee, Reveal, Spotlight, Tilt } from "@/components/aurum-ui";
 import { AurumFooter } from "@/components/aurum-footer";
 import { MyPositions } from "@/components/staking/my-positions";
@@ -197,24 +197,24 @@ export function ObsidianDashboard() {
 
   useEffect(() => { captureReferrerFromUrl(); }, []);
 
-  const contractAddress = RWAN_V4_STAKING_ADDRESS ?? zeroAddress;
-  const contractConfigured = Boolean(RWAN_V4_STAKING_ADDRESS && RWAN_V4_STAKING_ADDRESS !== zeroAddress);
+  const contractAddress = RWAN_V5_STAKING_ADDRESS ?? zeroAddress;
+  const contractConfigured = Boolean(RWAN_V5_STAKING_ADDRESS && RWAN_V5_STAKING_ADDRESS !== zeroAddress);
   const planCount = useReadContract({
-    address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakePlansLength",
+    address: contractAddress, abi: RWAN_V5_ABI, functionName: "stakePlansLength",
     query: { enabled: contractConfigured, refetchInterval: 60_000 },
   });
   const planReads = useReadContracts({
     contracts: Array.from({ length: Math.min(Number(planCount.data ?? 0), 32) }, (_, index) => ({
-      address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakePlans" as const, args: [BigInt(index)] as const,
+      address: contractAddress, abi: RWAN_V5_ABI, functionName: "stakePlans" as const, args: [BigInt(index)] as const,
     })),
     query: { enabled: contractConfigured && Number(planCount.data ?? 0) > 0, refetchInterval: 60_000 },
   });
-  const tokenRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakingToken", query: { enabled: contractConfigured } });
-  const minStakeRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "minStakeAmount", query: { enabled: contractConfigured } });
-  const totalStakedRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "totalStaked", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
-  const rewardReserveRead = useReadContract({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakingRewardReserve", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
+  const tokenRead = useReadContract({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "stakingToken", query: { enabled: contractConfigured } });
+  const minStakeRead = useReadContract({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "minStakeAmount", query: { enabled: contractConfigured } });
+  const totalStakedRead = useReadContract({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "totalStaked", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
+  const rewardReserveRead = useReadContract({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "stakingRewardReserve", query: { enabled: contractConfigured, refetchInterval: 60_000 } });
   const referrerOfRead = useReadContract({
-    address: contractAddress, abi: RWAN_V4_ABI, functionName: "referrerOf",
+    address: contractAddress, abi: RWAN_V5_ABI, functionName: "referrerOf",
     args: address ? [address] : undefined,
     query: { enabled: contractConfigured && Boolean(address) },
   });
@@ -227,7 +227,7 @@ export function ObsidianDashboard() {
   });
   const walletBalance = balanceRead.data ?? 0n;
 
-  // V4 pays affiliate commissions directly to wallet — no on-chain accumulator to query
+  // V5 pays affiliate commissions directly to wallet — no on-chain accumulator to query
 
   const livePlans = useMemo(() => planReads.data?.flatMap((item, index) => {
     const result = item.result as readonly [bigint, bigint, bigint, boolean] | undefined;
@@ -267,7 +267,7 @@ export function ObsidianDashboard() {
       ? zeroAddress
       : stored;
     await writeContractAsync({ address: tokenRead.data, abi: ERC20_WRITE_ABI, functionName: "approve", args: [contractAddress, stakeAmount] });
-    await writeContractAsync({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), referrer] });
+    await writeContractAsync({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), referrer] });
     window.dispatchEvent(new Event("rwan:staked"));
   };
 
@@ -282,7 +282,7 @@ export function ObsidianDashboard() {
 
       {/* ---------- Topline ---------- */}
       <div className="ob-topline">
-        <span className="ob-top-item"><span className="ob-live" /> {contractConfigured ? "V4 live" : "V4 pending"} · BNB Chain</span>
+        <span className="ob-top-item"><span className="ob-live" /> {contractConfigured ? "Live" : "Pending"}</span>
       </div>
 
       {/* ---------- Nav ---------- */}
@@ -316,7 +316,7 @@ export function ObsidianDashboard() {
               <KineticLine words={["is", "a", "choice."]} serifLast delay={0.28} />
             </h1>
             <motion.p className="ob-sub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.75, duration: 0.8 }}>
-              Seven staking plans on BNB Chain, each with a fixed daily rate
+              Seven staking plans, each with a fixed daily rate
               and lock term set on-chain — from no-lock Flex at 0.03% to the
               720-day tier at 0.28%.
             </motion.p>
@@ -351,7 +351,7 @@ export function ObsidianDashboard() {
 
         {/* ---------- Ticker ---------- */}
         <Reveal className="ob-ticker" y={0}>
-          <Marquee items={["Reserve-backed rewards", "·", "Non-custodial", "·", "Transparent on-chain rates", "·", "720-day marketplace tier", "·", "Referral rank engine", "·", "Built on BNB Chain", "·"]} />
+          <Marquee items={["Reserve-backed rewards", "·", "Non-custodial", "·", "Transparent on-chain rates", "·", "720-day marketplace tier", "·", "Referral rank engine", "·"]} />
         </Reveal>
 
         {/* ---------- Bento widgets ---------- */}
@@ -362,7 +362,7 @@ export function ObsidianDashboard() {
             </div>
             <div className="ob-card-metric">{tvl != null ? <CountUp value={tvl} suffix=" RWAAN" /> : "— RWAAN"}</div>
             <Sparkline />
-            <span className="ob-card-note">{contractConfigured ? "Live V4 contract read" : "Awaiting V4 deployment"}</span>
+            <span className="ob-card-note">{contractConfigured ? "Live contract read" : "Awaiting deployment"}</span>
           </Reveal>
 
           <Reveal className="ob-card" delay={0.07}>
@@ -382,7 +382,7 @@ export function ObsidianDashboard() {
 
           <Reveal className="ob-card" delay={0.21}>
             <div className="ob-card-head"><span className="ob-tag"><Zap className="h-3.5 w-3.5" /> Contract state</span></div>
-            <div className="ob-card-metric">{contractConfigured ? "V4 live" : "Pending"}</div>
+            <div className="ob-card-metric">{contractConfigured ? "Live" : "Pending"}</div>
             <span className="ob-card-note">No off-chain reward promises</span>
           </Reveal>
         </section>
@@ -392,7 +392,7 @@ export function ObsidianDashboard() {
           <div className="ob-ghost-num" aria-hidden="true">01</div>
           <div className="ob-section-head">
             <Reveal><h2 className="ob-h2">Pick your <em>lock term.</em></h2></Reveal>
-            <Reveal delay={0.08}><p>Every plan&apos;s rate, lock length, and early-exit penalty is set in the V4 contract and loads live below.</p></Reveal>
+            <Reveal delay={0.08}><p>Every plan&apos;s rate, lock length, and early-exit penalty is set in the contract and loads live below.</p></Reveal>
           </div>
           <div className="ob-plans">
             {displayPlans.map((item, index) => (

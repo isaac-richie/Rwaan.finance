@@ -3,7 +3,7 @@
 /**
  * MY POSITIONS — per-wallet staking positions with live-ticking rewards,
  * claim, and withdraw (or early-withdraw with penalty preview).
- * Reads only from RWANSecureStakingV4 — no indexer, fully on-chain.
+ * Reads only from RWANSecureStakingV5 — no indexer, fully on-chain.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -11,7 +11,7 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract } from 
 import { formatUnits, type Address } from "viem";
 import { CheckCircle2, Clock, Loader2, LockKeyhole, Sparkles, TriangleAlert, Unlock } from "lucide-react";
 
-import { RWAN_V4_ABI } from "@/lib/contracts/rwanV4Abi";
+import { RWAN_V5_ABI } from "@/lib/contracts/rwanV5Abi";
 import { parseContractError } from "@/lib/utils/contract-errors";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -91,7 +91,7 @@ export function MyPositions({
   const enabled = contractConfigured && Boolean(address);
 
   const idsRead = useReadContract({
-    address: contractAddress, abi: RWAN_V4_ABI, functionName: "userPositions",
+    address: contractAddress, abi: RWAN_V5_ABI, functionName: "userPositions",
     args: address ? [address] : undefined,
     query: { enabled, refetchInterval: 20_000 },
   });
@@ -99,20 +99,20 @@ export function MyPositions({
 
   const positionsRead = useReadContracts({
     contracts: ids.map((id) => ({
-      address: contractAddress, abi: RWAN_V4_ABI, functionName: "positions" as const, args: [id] as const,
+      address: contractAddress, abi: RWAN_V5_ABI, functionName: "positions" as const, args: [id] as const,
     })),
     query: { enabled: enabled && ids.length > 0, refetchInterval: 20_000 },
   });
   const pendingRead = useReadContracts({
     contracts: ids.map((id) => ({
-      address: contractAddress, abi: RWAN_V4_ABI, functionName: "pendingRewards" as const, args: [id] as const,
+      address: contractAddress, abi: RWAN_V5_ABI, functionName: "pendingRewards" as const, args: [id] as const,
     })),
     query: { enabled: enabled && ids.length > 0, refetchInterval: 20_000 },
   });
   const pausedRead = useReadContracts({
     contracts: [
-      { address: contractAddress, abi: RWAN_V4_ABI, functionName: "claimsPaused" as const },
-      { address: contractAddress, abi: RWAN_V4_ABI, functionName: "withdrawalsPaused" as const },
+      { address: contractAddress, abi: RWAN_V5_ABI, functionName: "claimsPaused" as const },
+      { address: contractAddress, abi: RWAN_V5_ABI, functionName: "withdrawalsPaused" as const },
     ],
     query: { enabled: contractConfigured, refetchInterval: 30_000 },
   });
@@ -150,7 +150,7 @@ export function MyPositions({
   );
   const plansRead = useReadContracts({
     contracts: uniquePlanIds.map((pid) => ({
-      address: contractAddress, abi: RWAN_V4_ABI, functionName: "stakePlans" as const, args: [BigInt(pid)] as const,
+      address: contractAddress, abi: RWAN_V5_ABI, functionName: "stakePlans" as const, args: [BigInt(pid)] as const,
     })),
     query: { enabled: contractConfigured && uniquePlanIds.length > 0 },
   });
@@ -214,7 +214,7 @@ export function MyPositions({
   const handleClaim = async (id: bigint) => {
     setClaimingId(id);
     try {
-      await writeContractAsync({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "claim", args: [id] });
+      await writeContractAsync({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "claim", args: [id] });
       toast({ title: "Rewards claimed", description: "Pending rewards were sent to your wallet." });
       await refetchAll();
     } catch (e) {
@@ -228,7 +228,7 @@ export function MyPositions({
   const handleWithdraw = async (id: bigint) => {
     setWithdrawingId(id);
     try {
-      await writeContractAsync({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "withdraw", args: [id] });
+      await writeContractAsync({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "withdraw", args: [id] });
       toast({ title: "Position withdrawn", description: "Principal and any pending rewards were sent to your wallet." });
       await refetchAll();
     } catch (e) {
@@ -242,7 +242,7 @@ export function MyPositions({
   const handleWithdrawEarly = async (id: bigint) => {
     setWithdrawingId(id);
     try {
-      await writeContractAsync({ address: contractAddress, abi: RWAN_V4_ABI, functionName: "withdrawEarly", args: [id] });
+      await writeContractAsync({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "withdrawEarly", args: [id] });
       toast({ title: "Withdrawn early", description: "The plan's early-exit penalty was applied; the remainder was sent to your wallet." });
       await refetchAll();
     } catch (e) {

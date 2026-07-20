@@ -7,7 +7,7 @@
  * Required env vars:
  *   CRON_SECRET                  — Vercel cron bearer token (auto-set by Vercel)
  *   PARAMETER_ROLE_PRIVATE_KEY   — private key of the wallet holding PARAMETER_ROLE
- *   NEXT_PUBLIC_RWAN_V4_STAKING_ADDRESS — deployed staking contract
+ *   NEXT_PUBLIC_RWAN_V5_STAKING_ADDRESS — deployed staking contract
  *   BSC_ALCHEMY_RPC_URL          — BSC RPC (already in .env)
  */
 
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const contractAddress = process.env.NEXT_PUBLIC_RWAN_V4_STAKING_ADDRESS as
+  const contractAddress = process.env.NEXT_PUBLIC_RWAN_V5_STAKING_ADDRESS as
     | `0x${string}`
     | undefined;
   const rawKey = process.env.PARAMETER_ROLE_PRIVATE_KEY;
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
 
   if (!contractAddress) {
     return NextResponse.json(
-      { skipped: true, reason: "NEXT_PUBLIC_RWAN_V4_STAKING_ADDRESS not set yet" },
+      { skipped: true, reason: "NEXT_PUBLIC_RWAN_V5_STAKING_ADDRESS not set yet" },
       { status: 200 }
     );
   }

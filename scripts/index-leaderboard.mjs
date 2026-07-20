@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Leaderboard indexer for RWANSecureStakingV4.
+ * Leaderboard indexer for RWANSecureStakingV5.
  *
  * Scans on-chain events from the last-synced block, reconciles per-position and
  * per-wallet aggregates, and upserts them into Supabase. Idempotent via a block
@@ -8,8 +8,8 @@
  *
  * Env:
  *   LEADERBOARD_RPC_URL         (server RPC; falls back to BSC_TESTNET_RPC_URL)
- *   RWAN_V4_STAKING_ADDRESS     staking contract address
- *   RWAN_V4_DEPLOY_BLOCK        block the contract was deployed at (first sync)
+ *   RWAN_V5_STAKING_ADDRESS     staking contract address
+ *   RWAN_V5_DEPLOY_BLOCK        block the contract was deployed at (first sync)
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
  *   node scripts/index-leaderboard.mjs
@@ -18,12 +18,12 @@ import { createPublicClient, http, parseAbiItem, getAddress } from "viem";
 import { createClient } from "@supabase/supabase-js";
 
 const RPC = process.env.LEADERBOARD_RPC_URL || process.env.BSC_TESTNET_RPC_URL;
-const STAKING = process.env.RWAN_V4_STAKING_ADDRESS;
-const DEPLOY_BLOCK = BigInt(process.env.RWAN_V4_DEPLOY_BLOCK || "0");
+const STAKING = process.env.RWAN_V5_STAKING_ADDRESS;
+const DEPLOY_BLOCK = BigInt(process.env.RWAN_V5_DEPLOY_BLOCK || "0");
 const CHUNK = 4_000n; // public RPCs cap getLogs ranges; stay conservative
 const STATE_ID = "leaderboard";
 
-if (!RPC || !STAKING) throw new Error("Set LEADERBOARD_RPC_URL and RWAN_V4_STAKING_ADDRESS");
+if (!RPC || !STAKING) throw new Error("Set LEADERBOARD_RPC_URL and RWAN_V5_STAKING_ADDRESS");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,

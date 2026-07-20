@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { formatUnits, zeroAddress } from "viem";
+import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { formatUnits } from "viem";
 import {
   ArrowLeft,
   Check,
@@ -18,7 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 
-import { RWAN_V4_ABI, RWAN_V4_STAKING_ADDRESS } from "@/lib/contracts/rwanV4Abi";
+import { RWAN_V5_ABI, RWAN_V5_STAKING_ADDRESS } from "@/lib/contracts/rwanV5Abi";
 import { CountUp, Grain, Magnetic, Reveal, Spotlight } from "@/components/aurum-ui";
 import { AurumFooter } from "@/components/aurum-footer";
 import { WalletButton } from "@/components/wallet-button";
@@ -38,18 +38,6 @@ function fmt(wei: bigint | undefined, decimals = 2): string {
 function short(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
-
-const RANK_LABELS: Record<number, string> = {
-  1: "Rank 1",  2: "Rank 2",  3: "Rank 3",  4: "Rank 4",
-  5: "Rank 5",  6: "Rank 6",  7: "Rank 7",  8: "Rank 8",
-  9: "Rank 9",  10: "Rank 10", 11: "Tricycle", 12: "Jeep",
-};
-
-const RANK_AWARDS: Record<number, string> = {
-  1: "$100",  2: "$150",  3: "$200",  4: "$300",  5: "$350",
-  6: "$400",  7: "$500",  8: "$700",  9: "$1,500",
-  10: "$2,500", 11: "$4,000", 12: "$8,000",
-};
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -82,7 +70,7 @@ export function NetworkDashboard() {
   const [networkLoading, setNetworkLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const staking = RWAN_V4_STAKING_ADDRESS;
+  const staking = RWAN_V5_STAKING_ADDRESS;
   const referralLink = address ? buildReferralLink(address) : "";
 
   // ── clipboard copy with textarea fallback ──────────────────────────────────
@@ -115,57 +103,99 @@ export function NetworkDashboard() {
   // ── on-chain reads ─────────────────────────────────────────────────────────
   const chainReads = useReadContracts({
     contracts: staking && address ? [
-      { address: staking, abi: RWAN_V4_ABI, functionName: "totalUserStaked", args: [address] },
-      { address: staking, abi: RWAN_V4_ABI, functionName: "teamStake",       args: [address] },
-      { address: staking, abi: RWAN_V4_ABI, functionName: "referrerOf",      args: [address] },
-      { address: staking, abi: RWAN_V4_ABI, functionName: "userRanks",       args: [address] },
+      { address: staking, abi: RWAN_V5_ABI, functionName: "totalUserStaked", args: [address] },
+      { address: staking, abi: RWAN_V5_ABI, functionName: "teamStake",       args: [address] },
+      { address: staking, abi: RWAN_V5_ABI, functionName: "referrerOf",      args: [address] },
+      { address: staking, abi: RWAN_V5_ABI, functionName: "milestonesCount" },
+      { address: staking, abi: RWAN_V5_ABI, functionName: "pendingMilestones", args: [address] },
     ] : [],
     query: { enabled: !!staking && !!address, refetchInterval: 30_000 },
   });
 
-  // ── rank config reads — dynamic, straight from the contract ───────────────
-  const rankConfigsLengthRead = useReadContract({
-    address: staking ?? zeroAddress,
-    abi: RWAN_V4_ABI,
-    functionName: "rankConfigsLength",
-    query: { enabled: !!staking },
+  const personalStake    = chainReads.data?.[0]?.result as bigint | undefined;
+  const teamStake        = chainReads.data?.[1]?.result as bigint | undefined;
+  const uplineChain      = chainReads.data?.[2]?.result as string | undefined;
+  const milestonesCount  = Number(chainReads.data?.[3]?.result ?? 0);
+  const pendingIdsRaw    = chainReads.data?.[4]?.result as bigint[] | undefined;
+  const pendingIds       = useMemo(() => pendingIdsRaw ?? [], [pendingIdsRaw]);
+
+  // ── milestone config + claim status reads ─────────────────────────────────
+  const milestoneReads = useReadContracts({
+    contracts: staking && milestonesCount > 0
+      ? Array.from({ length: milestonesCount }, (_, i) => [
+          { address: staking!, abi: RWAN_V5_ABI, functionName: "milestones" as const, args: [BigInt(i + 1)] as const },
+          ...(address
+            ? [{ address: staking!, abi: RWAN_V5_ABI, functionName: "milestoneClaimed" as const, args: [address, BigInt(i + 1)] as const }]
+            : []),
+        ]).flat()
+      : [],
+    query: { enabled: !!staking && milestonesCount > 0, refetchInterval: 30_000 },
   });
-  const rankCount = Number(rankConfigsLengthRead.data ?? 0);
 
-  const rankConfigsRead = useReadContracts({
-    contracts: Array.from({ length: rankCount }, (_, i) => ({
-      address: staking!,
-      abi: RWAN_V4_ABI,
-      functionName: "rankConfigs" as const,
-      args: [BigInt(i + 1)] as const,
-    })),
-    query: { enabled: !!staking && rankCount > 0 },
-  });
+  interface MilestoneInfo {
+    id: number;
+    minTeamStake: bigint;
+    reward: bigint;
+    enabled: boolean;
+    claimed: boolean;
+    claimable: boolean;
+  }
 
-  // Build map: rankId (1-indexed) → minTeamStake (bigint)
-  const rankTeamReq = useMemo<Map<number, bigint>>(() => {
-    const m = new Map<number, bigint>();
-    rankConfigsRead.data?.forEach((r, i) => {
-      const res = r.result as readonly [bigint, bigint, number, boolean] | undefined;
-      if (res && res[3]) m.set(i + 1, res[1]); // minTeamStake
-    });
-    return m;
-  }, [rankConfigsRead.data]);
+  const milestones = useMemo<MilestoneInfo[]>(() => {
+    if (!milestoneReads.data || milestonesCount === 0) return [];
+    const stride = address ? 2 : 1;
+    const result: MilestoneInfo[] = [];
+    for (let i = 0; i < milestonesCount; i++) {
+      const cfg = milestoneReads.data[i * stride]?.result as readonly [bigint, bigint, boolean] | undefined;
+      const claimed = address ? (milestoneReads.data[i * stride + 1]?.result as boolean | undefined) ?? false : false;
+      if (!cfg) continue;
+      const id = i + 1;
+      result.push({
+        id,
+        minTeamStake: cfg[0],
+        reward: cfg[1],
+        enabled: cfg[2],
+        claimed,
+        claimable: pendingIds.some((pid) => Number(pid) === id),
+      });
+    }
+    return result;
+  }, [milestoneReads.data, milestonesCount, address, pendingIds]);
 
-  const personalStake = chainReads.data?.[0]?.result as bigint | undefined;
-  const teamStake     = chainReads.data?.[1]?.result as bigint | undefined;
-  const uplineChain   = chainReads.data?.[2]?.result as string | undefined;
-  const rankData      = chainReads.data?.[3]?.result as readonly [number, bigint, bigint] | undefined;
+  const claimedCount = milestones.filter((m) => m.claimed).length;
+  const nextMilestone = milestones.find((m) => !m.claimed && m.enabled);
 
-  const currentRank = rankData ? Number(rankData[0]) : 0;
-  const nextRank    = currentRank < 12 ? currentRank + 1 : null;
-  const nextTeamReq = nextRank
-    ? (rankTeamReq.get(nextRank) ?? null)
-    : null;
-
-  const teamPct = nextTeamReq && teamStake
-    ? Math.min(100, Number((teamStake * 100n) / nextTeamReq))
+  const teamPct = nextMilestone && teamStake
+    ? Math.min(100, Number((teamStake * 100n) / nextMilestone.minTeamStake))
     : 0;
+
+  // ── claim milestone ───────────────────────────────────────────────────────
+  const { writeContract: claimMilestone, data: claimTxHash, isPending: isClaiming } = useWriteContract();
+  const { isLoading: isClaimConfirming, isSuccess: isClaimConfirmed } = useWaitForTransactionReceipt({ hash: claimTxHash });
+
+  useEffect(() => {
+    if (isClaimConfirmed) chainReads.refetch();
+  }, [isClaimConfirmed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleClaim = (milestoneId: number) => {
+    if (!staking) return;
+    claimMilestone({
+      address: staking,
+      abi: RWAN_V5_ABI,
+      functionName: "claimMilestone",
+      args: [BigInt(milestoneId)],
+    });
+  };
+
+  const handleClaimAll = () => {
+    if (!staking || pendingIds.length === 0) return;
+    claimMilestone({
+      address: staking,
+      abi: RWAN_V5_ABI,
+      functionName: "claimMultipleMilestones",
+      args: [pendingIds],
+    });
+  };
 
   // ── Supabase network fetch ─────────────────────────────────────────────────
   const addr = address?.toLowerCase();
@@ -195,7 +225,7 @@ export function NetworkDashboard() {
       {/* ── Nav ── */}
       <div className="ob-topline">
         <span className="ob-top-item">
-          <span className="ob-live" /> V4 live · BNB Chain
+          <span className="ob-live" /> Live
         </span>
       </div>
       <header className="ob-nav">
@@ -229,7 +259,7 @@ export function NetworkDashboard() {
               <h1 className="ob-h2">Your <em>network.</em></h1>
             </Reveal>
             <Reveal delay={0.08}>
-              <p>Downline depth, team stake, and rank progress — all live from the V4 contract.</p>
+              <p>Downline depth, team stake, and milestone progress — all live from the contract.</p>
             </Reveal>
           </div>
         </section>
@@ -282,8 +312,8 @@ export function NetworkDashboard() {
                 </div>
                 <span className="ob-card-note">
                   {network
-                    ? `L1: ${network.direct_members} · L2: ${network.l2_members} · L3: ${network.l3_members}`
-                    : "L1 · L2 · L3 counted"}
+                    ? `${network.direct_members} direct referral${network.direct_members !== 1 ? "s" : ""}`
+                    : "Direct referrals counted"}
                 </span>
               </Reveal>
             </section>
@@ -295,8 +325,8 @@ export function NetworkDashboard() {
                 <Reveal><h2 className="ob-h2">Your referral <em>link.</em></h2></Reveal>
                 <Reveal delay={0.06}>
                   <p>
-                    Anyone who stakes through this link joins your L1 downline — you earn 5% affiliate
-                    commission on their stake, 3% on L2, and 2% on L3.
+                    Anyone who stakes through this link becomes your direct referral — you earn a
+                    one-time 2% affiliate payout on their staked amount, paid instantly in RWAAN.
                   </p>
                 </Reveal>
               </div>
@@ -330,42 +360,42 @@ export function NetworkDashboard() {
               </Reveal>
             </section>
 
-            {/* ── Rank card ── */}
+            {/* ── Milestone card ── */}
             <section className="ob-section">
               <div className="ob-ghost-num" aria-hidden="true">02</div>
               <div className="ob-section-head">
-                <Reveal><h2 className="ob-h2">Rank &amp; <em>progress.</em></h2></Reveal>
+                <Reveal><h2 className="ob-h2">Rank <em>milestones.</em></h2></Reveal>
                 <Reveal delay={0.06}>
-                  <p>Rank is calculated from team stake on-chain. Each tier unlocks a daily reward from the rank pool.</p>
+                  <p>One-time RWAAN rewards based on your direct referral team stake. Claim each milestone once when your team reaches the threshold.</p>
                 </Reveal>
               </div>
 
               <Reveal className="ob-rank-card">
                 <div className="ob-rank-head">
                   <div>
-                    <span className="ob-tag"><Star className="h-3.5 w-3.5" /> Current rank</span>
+                    <span className="ob-tag"><Star className="h-3.5 w-3.5" /> Milestones claimed</span>
                     <div className="ob-rank-title">
-                      {currentRank === 0 ? "Unranked" : RANK_LABELS[currentRank]}
+                      {claimedCount} / {milestones.length}
                     </div>
-                    {currentRank > 0 && (
-                      <div className="ob-rank-award">{RANK_AWARDS[currentRank]} / day</div>
+                    {pendingIds.length > 0 && (
+                      <div className="ob-rank-award">{pendingIds.length} reward{pendingIds.length > 1 ? "s" : ""} ready to claim</div>
                     )}
                   </div>
                   <div className="ob-rank-badge">
-                    {currentRank === 0 ? "🏁" : currentRank >= 11 ? "🏆" : "⭐"}
+                    {claimedCount === 0 ? "\u{1F3C1}" : claimedCount >= milestones.length ? "\u{1F3C6}" : "⭐"}
                   </div>
                 </div>
 
-                {currentRank === 12 && (
+                {claimedCount === milestones.length && milestones.length > 0 && (
                   <div className="ob-rank-maxed">
-                    Maximum rank achieved — Jeep level unlocked.
+                    All milestones claimed — congratulations!
                   </div>
                 )}
 
-                {nextRank && (
+                {nextMilestone && (
                   <div className="ob-rank-progress">
                     <div className="ob-rank-progress-label">
-                      <span>Progress to {RANK_LABELS[nextRank]}</span>
+                      <span>Progress to Milestone {nextMilestone.id}</span>
                       <span className="ob-rank-pct">{teamPct.toFixed(1)}%</span>
                     </div>
                     <div className="ob-rank-bar-track">
@@ -375,48 +405,69 @@ export function NetworkDashboard() {
                       <div className="ob-rank-stat">
                         <span>Team Stake</span>
                         <strong>
-                          {fmt(teamStake)} / {nextTeamReq != null ? fmt(nextTeamReq) : "—"} RWAAN
+                          {fmt(teamStake)} / {fmt(nextMilestone.minTeamStake)} RWAAN
                         </strong>
                       </div>
                       <div className="ob-rank-stat">
-                        <span>Award at next rank</span>
-                        <strong>{RANK_AWARDS[nextRank]}/day</strong>
+                        <span>Reward</span>
+                        <strong>{fmt(nextMilestone.reward)} RWAAN</strong>
                       </div>
                     </div>
                   </div>
                 )}
+
+                {pendingIds.length > 1 && (
+                  <div style={{ marginTop: "1rem" }}>
+                    <Magnetic strength={0.2}>
+                      <button
+                        type="button"
+                        className="ob-btn-gold"
+                        disabled={isClaiming || isClaimConfirming}
+                        onClick={handleClaimAll}
+                      >
+                        {isClaiming || isClaimConfirming ? "Claiming…" : `Claim all ${pendingIds.length} rewards`}
+                      </button>
+                    </Magnetic>
+                  </div>
+                )}
               </Reveal>
 
-              {/* Rank table */}
+              {/* Milestone table */}
               <Reveal delay={0.1} className="ob-rank-table-wrap">
                 <table className="ob-rank-table">
                   <thead>
                     <tr>
-                      <th>Rank</th>
+                      <th>#</th>
                       <th>Team Stake Required</th>
-                      <th>Daily Award</th>
+                      <th>Reward</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const rid = i + 1;
-                      const req = rankTeamReq.get(rid);
-                      const isActive = rid === currentRank;
-                      const isDone = rid < currentRank;
-                      return (
-                        <tr key={rid} className={isActive ? "ob-rank-row-active" : isDone ? "ob-rank-row-done" : ""}>
-                          <td>{RANK_LABELS[rid] ?? `Rank ${rid}`}</td>
-                          <td>{req != null ? `${fmt(req)} RWAAN` : "—"}</td>
-                          <td>{RANK_AWARDS[rid]}</td>
-                          <td>
-                            {isActive ? <span className="ob-live-pill"><span className="ob-live" /> active</span>
-                              : isDone ? <span className="ob-rank-achieved">achieved</span>
-                              : <span className="ob-rank-locked">locked</span>}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {milestones.map((m) => (
+                      <tr key={m.id} className={m.claimed ? "ob-rank-row-done" : m.claimable ? "ob-rank-row-active" : ""}>
+                        <td>{m.id}</td>
+                        <td>{fmt(m.minTeamStake)} RWAAN</td>
+                        <td>{fmt(m.reward)} RWAAN</td>
+                        <td>
+                          {m.claimed ? (
+                            <span className="ob-rank-achieved">claimed</span>
+                          ) : m.claimable ? (
+                            <button
+                              type="button"
+                              className="ob-btn-gold"
+                              style={{ padding: "0.25rem 0.75rem", fontSize: "0.75rem" }}
+                              disabled={isClaiming || isClaimConfirming}
+                              onClick={() => handleClaim(m.id)}
+                            >
+                              {isClaiming || isClaimConfirming ? "…" : "Claim"}
+                            </button>
+                          ) : (
+                            <span className="ob-rank-locked">locked</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </Reveal>
@@ -462,17 +513,11 @@ export function NetworkDashboard() {
 
               {/* Level breakdown */}
               <Reveal delay={0.08} className="ob-downline-levels">
-                {[
-                  { level: "L1 — Direct", count: network?.direct_members ?? 0, commission: "5%" },
-                  { level: "L2", count: network?.l2_members ?? 0, commission: "3%" },
-                  { level: "L3", count: network?.l3_members ?? 0, commission: "2%" },
-                ].map((row) => (
-                  <div key={row.level} className="ob-downline-row">
-                    <span className="ob-tag">{row.level}</span>
-                    <span className="ob-downline-count">{row.count} member{row.count !== 1 ? "s" : ""}</span>
-                    <span className="ob-downline-comm">{row.commission} affiliate</span>
-                  </div>
-                ))}
+                <div className="ob-downline-row">
+                  <span className="ob-tag">Direct referrals</span>
+                  <span className="ob-downline-count">{network?.direct_members ?? 0} member{(network?.direct_members ?? 0) !== 1 ? "s" : ""}</span>
+                  <span className="ob-downline-comm">2% affiliate</span>
+                </div>
               </Reveal>
 
               {/* L1 member list */}

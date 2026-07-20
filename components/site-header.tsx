@@ -57,12 +57,7 @@ export function SiteHeader() {
               <span className="text-[13px] sm:text-[15px] font-semibold tracking-tight text-white">
                 Rwan Analytics
               </span>
-              <div className="flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-[#F3BA2F]/60" />
-                <span className="text-[10px] sm:text-[11px] font-medium text-white/30">
-                  BNB Smart Chain
-                </span>
-              </div>
+              <div className="flex items-center gap-1.5" />
             </div>
           </div>
 

@@ -97,7 +97,7 @@ export function AurumFooter() {
               <span className="au-footer-by">by <em>Rawli Analytics</em></span>
             </div>
           </div>
-          <p>Transparent, reserve-backed staking infrastructure on BNB Chain.</p>
+          <p>Transparent, reserve-backed staking infrastructure.</p>
           <div className="au-socials">
             <a
               href="https://twitter.com"
@@ -131,8 +131,6 @@ export function AurumFooter() {
       <div className="au-footer-bottom">
         <span>© {new Date().getFullYear()} RWAAN. All rights reserved.</span>
         <span className="au-footer-meta">
-          <span className="v2-footer-dot" /> BNB Chain
-          <span className="au-foot-sep">·</span>
           Not financial advice
         </span>
       </div>
