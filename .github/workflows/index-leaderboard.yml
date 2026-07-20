@@ -1,0 +1,53 @@
+name: Index leaderboard
+
+# Vercel Hobby only permits daily cron triggers, which would leave new
+# referrals and affiliate earnings invisible for up to 24h. This runs the
+# same endpoint on a tighter schedule for free.
+#
+# Required repo secret:
+#   CRON_SECRET  — must match the CRON_SECRET env var in the Vercel project
+# Optional repo variable:
+#   SITE_URL     — defaults to https://rawli.finance
+
+on:
+  schedule:
+    # Every 10 minutes. GitHub may delay runs under load; that's fine, the
+    # indexer is cursor-based and simply picks up wherever it left off.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+# Never let two indexer runs overlap — the block cursor only advances on
+# success, so a concurrent pass could re-scan and double-count.
+concurrency:
+  group: index-leaderboard
+  cancel-in-progress: false
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger indexer
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://rawli.finance' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET not set — skipping (add it in repo Settings > Secrets)."
+            exit 0
+          fi
+
+          response=$(curl -sS --max-time 120 -w '\n%{http_code}' \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/index-leaderboard")
+
+          status=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP $status"
+          echo "$body"
+
+          if [ "$status" != "200" ]; then
+            echo "::error::Indexer returned HTTP $status"
+            exit 1
+          fi
