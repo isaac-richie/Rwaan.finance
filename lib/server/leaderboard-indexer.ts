@@ -108,27 +108,18 @@ export async function runLeaderboardIndex(): Promise<IndexResult> {
     .maybeSingle();
   const cursor = priorState?.last_block ? BigInt(priorState.last_block) : deployBlock;
 
-  // Try each Alchemy endpoint. A capped key returns stale block numbers instead
-  // of erroring, so reject any head that hasn't advanced past the cursor.
-  let client: ReturnType<typeof createPublicClient> | null = null;
-  for (const rpc of logEndpoints) {
-    try {
-      const c = createPublicClient({ transport: http(rpc, { retryCount: 0, timeout: 15_000 }) });
-      const h = await c.getBlockNumber();
-      if (h > cursor) {
-        client = c;
-        break;
-      }
-    } catch {
-      // endpoint dead or capped — try next
-    }
-  }
-  if (!client) return { ok: false, skipped: `no Alchemy endpoint returned a live head past cursor ${cursor}` };
+  // Use the public BSC node for getBlockNumber — it's reliable and always live.
+  // Alchemy keys are only used for getLogs (which public nodes reject).
+  // A capped Alchemy key returns stale block numbers silently, so we can't
+  // use it to determine the real chain head.
+  const pubClient = createPublicClient({
+    transport: http("https://bsc-dataseed.binance.org/", { retryCount: 1, timeout: 10_000 }),
+  });
+  const head = await pubClient.getBlockNumber();
 
   const address = getAddress(staking);
 
-  // 1) resolve sync window (cursor was already fetched above for endpoint selection)
-  const head = await client.getBlockNumber();
+  // 1) resolve sync window
   const from = cursor + 1n;
   if (from > head) {
     return { ok: true, caughtUp: true, head: head.toString() };
@@ -152,10 +143,23 @@ export async function runLeaderboardIndex(): Promise<IndexResult> {
 
   const ABI = Object.values(EVENTS);
 
-  // 2) scan in chunks — fetch by address only (no topic filter), then decode
+  // 2) scan in chunks — fetch by address only (no topic filter), then decode.
+  // Try each Alchemy endpoint per chunk; a capped key will error on getLogs.
   for (let start = from; start <= to; start += CHUNK) {
     const end = start + CHUNK - 1n > to ? to : start + CHUNK - 1n;
-    const rawLogs = await client.getLogs({ address, fromBlock: start, toBlock: end });
+    let rawLogs: Awaited<ReturnType<typeof pubClient.getLogs>> = [];
+    let fetched = false;
+    for (const rpc of logEndpoints) {
+      try {
+        const c = createPublicClient({ transport: http(rpc, { retryCount: 0, timeout: 30_000 }) });
+        rawLogs = await c.getLogs({ address, fromBlock: start, toBlock: end });
+        fetched = true;
+        break;
+      } catch {
+        // this endpoint failed (capped/rate-limited) — try next
+      }
+    }
+    if (!fetched) throw new Error(`all Alchemy endpoints failed for blocks ${start}-${end}`);
     const logs = parseEventLogs({ abi: ABI, logs: rawLogs, strict: false }).filter(
       (l) => l.eventName,
     );
