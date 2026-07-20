@@ -79,29 +79,26 @@ export interface IndexResult {
 }
 
 export async function runLeaderboardIndex(): Promise<IndexResult> {
-  const endpoints = [
+  // Alchemy endpoints support eth_getLogs with large block ranges.
+  // The public BSC node does NOT — it rejects getLogs even for tiny ranges.
+  // So we only use Alchemy endpoints for actual log scanning.
+  const logEndpoints = [
     process.env.BSC_ALCHEMY_RPC_URL,
     process.env.BSC_ALCHEMY_RPC_URL2,
     process.env.BSC_ALCHEMY_RPC_URL3,
     process.env.LEADERBOARD_RPC_URL,
-    process.env.BSC_RPC_URL,
-    "https://bsc-dataseed.binance.org/",
   ].filter((u): u is string => Boolean(u));
 
   const staking =
     process.env.RWAN_V5_STAKING_ADDRESS || process.env.NEXT_PUBLIC_RWAN_V5_STAKING_ADDRESS;
   const deployBlock = BigInt(process.env.RWAN_V5_DEPLOY_BLOCK || "0");
 
-  if (endpoints.length === 0) return { ok: false, skipped: "no RPC url configured" };
+  if (logEndpoints.length === 0) return { ok: false, skipped: "no Alchemy RPC url configured" };
   if (!staking) return { ok: false, skipped: "no staking address configured" };
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return { ok: false, skipped: "supabase env not configured" };
   }
 
-  // Try each endpoint until one returns a plausible chain head. A capped
-  // Alchemy key returns stale block numbers instead of erroring, so we also
-  // reject heads that haven't advanced past the cursor — that's a strong
-  // signal the endpoint is serving cached data.
   const { data: priorState } = await supabaseAdmin
     .from("indexer_state")
     .select("last_block")
@@ -109,8 +106,10 @@ export async function runLeaderboardIndex(): Promise<IndexResult> {
     .maybeSingle();
   const cursor = priorState?.last_block ? BigInt(priorState.last_block) : deployBlock;
 
+  // Try each Alchemy endpoint. A capped key returns stale block numbers instead
+  // of erroring, so reject any head that hasn't advanced past the cursor.
   let client: ReturnType<typeof createPublicClient> | null = null;
-  for (const rpc of endpoints) {
+  for (const rpc of logEndpoints) {
     try {
       const c = createPublicClient({ transport: http(rpc, { retryCount: 0, timeout: 5_000 }) });
       const h = await c.getBlockNumber();
@@ -122,7 +121,7 @@ export async function runLeaderboardIndex(): Promise<IndexResult> {
       // endpoint dead or capped — try next
     }
   }
-  if (!client) return { ok: false, skipped: `no RPC returned a head past cursor ${cursor}` };
+  if (!client) return { ok: false, skipped: `no Alchemy endpoint returned a live head past cursor ${cursor}` };
 
   const address = getAddress(staking);
 
