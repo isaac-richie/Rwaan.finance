@@ -79,33 +79,56 @@ export interface IndexResult {
 }
 
 export async function runLeaderboardIndex(): Promise<IndexResult> {
-  const rpc =
-    process.env.BSC_ALCHEMY_RPC_URL ||
-    process.env.LEADERBOARD_RPC_URL ||
-    process.env.BSC_TESTNET_RPC_URL;
-  // The non-public var isn't guaranteed to exist in the hosted env.
+  const endpoints = [
+    process.env.BSC_ALCHEMY_RPC_URL,
+    process.env.BSC_ALCHEMY_RPC_URL2,
+    process.env.BSC_ALCHEMY_RPC_URL3,
+    process.env.LEADERBOARD_RPC_URL,
+    process.env.BSC_RPC_URL,
+    "https://bsc-dataseed.binance.org/",
+  ].filter((u): u is string => Boolean(u));
+
   const staking =
     process.env.RWAN_V5_STAKING_ADDRESS || process.env.NEXT_PUBLIC_RWAN_V5_STAKING_ADDRESS;
   const deployBlock = BigInt(process.env.RWAN_V5_DEPLOY_BLOCK || "0");
 
-  if (!rpc) return { ok: false, skipped: "no RPC url configured" };
+  if (endpoints.length === 0) return { ok: false, skipped: "no RPC url configured" };
   if (!staking) return { ok: false, skipped: "no staking address configured" };
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return { ok: false, skipped: "supabase env not configured" };
   }
 
-  const client = createPublicClient({ transport: http(rpc) });
-  const address = getAddress(staking);
-
-  // 1) resolve sync window
-  const head = await client.getBlockNumber();
-  const { data: state } = await supabaseAdmin
+  // Try each endpoint until one returns a plausible chain head. A capped
+  // Alchemy key returns stale block numbers instead of erroring, so we also
+  // reject heads that haven't advanced past the cursor — that's a strong
+  // signal the endpoint is serving cached data.
+  const { data: priorState } = await supabaseAdmin
     .from("indexer_state")
     .select("last_block")
     .eq("id", STATE_ID)
     .maybeSingle();
+  const cursor = priorState?.last_block ? BigInt(priorState.last_block) : deployBlock;
 
-  const from = state?.last_block ? BigInt(state.last_block) + 1n : deployBlock;
+  let client: ReturnType<typeof createPublicClient> | null = null;
+  for (const rpc of endpoints) {
+    try {
+      const c = createPublicClient({ transport: http(rpc, { retryCount: 0, timeout: 5_000 }) });
+      const h = await c.getBlockNumber();
+      if (h > cursor) {
+        client = c;
+        break;
+      }
+    } catch {
+      // endpoint dead or capped — try next
+    }
+  }
+  if (!client) return { ok: false, skipped: `no RPC returned a head past cursor ${cursor}` };
+
+  const address = getAddress(staking);
+
+  // 1) resolve sync window (cursor was already fetched above for endpoint selection)
+  const head = await client.getBlockNumber();
+  const from = cursor + 1n;
   if (from > head) {
     return { ok: true, caughtUp: true, head: head.toString() };
   }
