@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * Leaderboard indexer for RWANSecureStakingV5.
+ * Leaderboard + network indexer for RWANSecureStakingV5.
  *
  * Scans on-chain events from the last-synced block, reconciles per-position and
- * per-wallet aggregates, and upserts them into Supabase. Idempotent via a block
- * cursor (indexer_state). Run on a cron (e.g. every 1-2 min) or a Vercel cron.
+ * per-wallet aggregates, populates referral_links and network_stats, and upserts
+ * them into Supabase. Idempotent via a block cursor (indexer_state).
+ * Run on a cron (e.g. every 1-2 min) or a Vercel cron.
  *
  * Env:
  *   LEADERBOARD_RPC_URL         (server RPC; falls back to BSC_TESTNET_RPC_URL)
@@ -56,6 +57,9 @@ const EVENTS = {
   affiliate: parseAbiItem(
     "event AffiliateRewardPaid(address indexed referrer, address indexed user, uint256 indexed level, uint256 amount)",
   ),
+  referrerSet: parseAbiItem(
+    "event ReferrerSet(address indexed user, address indexed referrer)",
+  ),
 };
 
 const zeroDelta = () => ({ active: 0n, total: 0n, rewards: 0n, referral: 0n, positions: 0 });
@@ -76,8 +80,12 @@ async function main() {
 
   const statDeltas = new Map(); // wallet -> delta
   const posCache = new Map(); // id -> { owner, amount, active }
-  const closes = []; // { id, key } to resolve
+  const closes = []; // position ids to resolve
   const touchPositions = new Map(); // id -> { owner, amount, active } to upsert
+
+  // Referral tracking
+  const newReferrals = new Map(); // referee -> referrer (from ReferrerSet events)
+  const userStakeAdded = new Map(); // user -> total new stake amount this scan
 
   const delta = (w) => {
     const k = w.toLowerCase();
@@ -104,7 +112,11 @@ async function main() {
     for (const log of logs) {
       const n = log.eventName;
       const a = log.args;
-      if (n === "PositionCreated") {
+      if (n === "ReferrerSet") {
+        const referee = a.user.toLowerCase();
+        const referrer = a.referrer.toLowerCase();
+        newReferrals.set(referee, referrer);
+      } else if (n === "PositionCreated") {
         const id = a.positionId.toString();
         const owner = a.user.toLowerCase();
         posCache.set(id, { owner, amount: a.amount, active: true });
@@ -113,6 +125,8 @@ async function main() {
         d.active += a.amount;
         d.total += a.amount;
         d.positions += 1;
+        // Track per-user stake for referral_links amount update
+        userStakeAdded.set(owner, (userStakeAdded.get(owner) ?? 0n) + a.amount);
       } else if (n === "Withdrawn" || n === "WithdrawnEarly" || n === "EmergencyWithdrawn") {
         closes.push(a.positionId.toString());
       } else if (n === "RewardClaimed" || n === "MarketplaceCreditClaimed") {
@@ -195,10 +209,108 @@ async function main() {
     await supabase.from("leaderboard_stats").upsert(rows);
   }
 
-  // 6) advance cursor
+  // 6) persist referral_links (referee → referrer relationships + stake volumes)
+  if (newReferrals.size || userStakeAdded.size) {
+    // For new referrals: insert the relationship with initial amount
+    const refRows = [];
+    for (const [referee, referrer] of newReferrals) {
+      const staked = userStakeAdded.get(referee) ?? 0n;
+      refRows.push({
+        referee,
+        referrer,
+        amount: staked.toString(),
+        joined_at: new Date().toISOString(),
+      });
+    }
+    if (refRows.length) {
+      await supabase.from("referral_links").upsert(refRows, { onConflict: "referee" });
+      console.log(`  referral_links: ${refRows.length} new referral(s)`);
+    }
+
+    // For existing referrals who staked again: increment their amount
+    const existingStakers = [...userStakeAdded.entries()].filter(
+      ([user]) => !newReferrals.has(user),
+    );
+    for (const [user, addAmount] of existingStakers) {
+      const { data: row } = await supabase
+        .from("referral_links")
+        .select("amount")
+        .eq("referee", user)
+        .maybeSingle();
+      if (row) {
+        const newAmount = (BigInt(row.amount) + addAmount).toString();
+        await supabase
+          .from("referral_links")
+          .update({ amount: newAmount })
+          .eq("referee", user);
+      }
+    }
+  }
+
+  // 7) refresh network_stats for all referrers affected this scan
+  const affectedReferrers = new Set([...newReferrals.values()]);
+  // Also include referrers of users who staked (their team volume changed)
+  if (userStakeAdded.size) {
+    const stakingUsers = [...userStakeAdded.keys()].filter((u) => !newReferrals.has(u));
+    if (stakingUsers.length) {
+      const { data: refs } = await supabase
+        .from("referral_links")
+        .select("referee, referrer")
+        .in("referee", stakingUsers);
+      for (const r of refs ?? []) affectedReferrers.add(r.referrer);
+    }
+  }
+
+  for (const referrer of affectedReferrers) {
+    const { data: members } = await supabase
+      .from("referral_links")
+      .select("referee, amount")
+      .eq("referrer", referrer);
+    const directCount = members?.length ?? 0;
+    const directAddrs = (members ?? []).map((m) => m.referee);
+
+    let totalMembers = directCount;
+    let teamVolume = (members ?? []).reduce((s, m) => s + BigInt(m.amount ?? 0), 0n);
+
+    // L2
+    if (directAddrs.length) {
+      const { data: l2 } = await supabase
+        .from("referral_links")
+        .select("referee, amount")
+        .in("referrer", directAddrs);
+      const l2Count = l2?.length ?? 0;
+      totalMembers += l2Count;
+      teamVolume += (l2 ?? []).reduce((s, m) => s + BigInt(m.amount ?? 0), 0n);
+
+      // L3
+      const l2Addrs = (l2 ?? []).map((m) => m.referee);
+      if (l2Addrs.length) {
+        const { data: l3 } = await supabase
+          .from("referral_links")
+          .select("referee, amount")
+          .in("referrer", l2Addrs);
+        totalMembers += l3?.length ?? 0;
+        teamVolume += (l3 ?? []).reduce((s, m) => s + BigInt(m.amount ?? 0), 0n);
+      }
+    }
+
+    await supabase.from("network_stats").upsert({
+      wallet: referrer,
+      direct_members: directCount,
+      total_members: totalMembers,
+      team_volume: teamVolume.toString(),
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  if (affectedReferrers.size) {
+    console.log(`  network_stats: ${affectedReferrers.size} referrer(s) refreshed`);
+  }
+
+  // 8) advance cursor
   await supabase.from("indexer_state").upsert({ id: STATE_ID, last_block: Number(head) });
   console.log(
-    `indexed ${from}..${head}: ${wallets.length} wallets, ${touchPositions.size} positions touched`,
+    `indexed ${from}..${head}: ${wallets.length} wallets, ${touchPositions.size} positions, ${newReferrals.size} referrals`,
   );
 }
 
