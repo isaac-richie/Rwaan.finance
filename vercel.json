@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/update-min-stake",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/index-leaderboard",
+      "schedule": "30 0 * * *"
     }
   ]
 }

@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   // L1 direct referrals with their individual stakes
   const { data: l1, error: l1Error } = await supabaseAdmin
     .from("referral_links")
-    .select("referee, amount, joined_at")
+    .select("referee, amount::text, joined_at")
     .eq("referrer", wallet)
     .order("amount", { ascending: false });
 
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   const { data: l2 } = directAddresses.length
     ? await supabaseAdmin
         .from("referral_links")
-        .select("referee, referrer, amount")
+        .select("referee, referrer, amount::text")
         .in("referrer", directAddresses)
     : { data: [] };
 
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   const { data: l3 } = l2Addresses.length
     ? await supabaseAdmin
         .from("referral_links")
-        .select("referee, referrer, amount")
+        .select("referee, referrer, amount::text")
         .in("referrer", l2Addresses)
     : { data: [] };
 
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
   // Affiliate earnings from leaderboard stats
   const { data: lbStats } = await supabaseAdmin
     .from("leaderboard_stats")
-    .select("referral_earned")
+    .select("referral_earned::text")
     .eq("wallet", wallet)
     .maybeSingle();
 

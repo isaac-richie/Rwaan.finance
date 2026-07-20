@@ -152,7 +152,7 @@ async function main() {
   if (missing.length) {
     const { data } = await supabase
       .from("leaderboard_positions")
-      .select("position_id, owner, amount, active")
+      .select("position_id, owner, amount::text, active")
       .in("position_id", missing);
     for (const row of data ?? []) {
       posCache.set(row.position_id, {
@@ -188,7 +188,7 @@ async function main() {
   if (wallets.length) {
     const { data: existing } = await supabase
       .from("leaderboard_stats")
-      .select("*")
+      .select("wallet, active_staked::text, total_staked::text, rewards_earned::text, referral_earned::text, positions")
       .in("wallet", wallets);
     const cur = new Map((existing ?? []).map((r) => [r.wallet, r]));
 
@@ -242,7 +242,7 @@ async function main() {
     for (const [user, addAmount] of existingStakers) {
       const { data: row } = await supabase
         .from("referral_links")
-        .select("amount")
+        .select("amount::text")
         .eq("referee", user)
         .maybeSingle();
       if (row) {
@@ -272,7 +272,7 @@ async function main() {
   for (const referrer of affectedReferrers) {
     const { data: members } = await supabase
       .from("referral_links")
-      .select("referee, amount")
+      .select("referee, amount::text")
       .eq("referrer", referrer);
     const directCount = members?.length ?? 0;
     const directAddrs = (members ?? []).map((m) => m.referee);
@@ -284,7 +284,7 @@ async function main() {
     if (directAddrs.length) {
       const { data: l2 } = await supabase
         .from("referral_links")
-        .select("referee, amount")
+        .select("referee, amount::text")
         .in("referrer", directAddrs);
       const l2Count = l2?.length ?? 0;
       totalMembers += l2Count;
@@ -295,7 +295,7 @@ async function main() {
       if (l2Addrs.length) {
         const { data: l3 } = await supabase
           .from("referral_links")
-          .select("referee, amount")
+          .select("referee, amount::text")
           .in("referrer", l2Addrs);
         totalMembers += l3?.length ?? 0;
         teamVolume += (l3 ?? []).reduce((s, m) => s + BigInt(m.amount ?? 0), 0n);
