@@ -160,7 +160,7 @@ export async function runLeaderboardIndex(): Promise<IndexResult> {
   // Try each Alchemy endpoint per chunk; a capped key will error on getLogs.
   for (let start = from; start <= to; start += CHUNK) {
     const end = start + CHUNK - 1n > to ? to : start + CHUNK - 1n;
-    let rawLogs: Awaited<ReturnType<typeof pubClient.getLogs>> = [];
+    let rawLogs: Awaited<ReturnType<ReturnType<typeof createPublicClient>["getLogs"]>> = [];
     let fetched = false;
     for (const rpc of logEndpoints) {
       try {
