@@ -108,14 +108,27 @@ export async function runLeaderboardIndex(): Promise<IndexResult> {
     .maybeSingle();
   const cursor = priorState?.last_block ? BigInt(priorState.last_block) : deployBlock;
 
-  // Use the public BSC node for getBlockNumber — it's reliable and always live.
-  // Alchemy keys are only used for getLogs (which public nodes reject).
-  // A capped Alchemy key returns stale block numbers silently, so we can't
-  // use it to determine the real chain head.
-  const pubClient = createPublicClient({
-    transport: http("https://bsc-dataseed.binance.org/", { retryCount: 1, timeout: 10_000 }),
-  });
-  const head = await pubClient.getBlockNumber();
+  // bsc-dataseed.binance.org is load-balanced — different Vercel edge regions
+  // can land on nodes that are hours behind. Query several public nodes and
+  // also the Alchemy key, then take the highest block number to get the real
+  // chain head. getLogs still goes through Alchemy only (public nodes reject it).
+  const headEndpoints = [
+    ...logEndpoints,
+    "https://bsc-dataseed1.binance.org/",
+    "https://bsc-dataseed2.binance.org/",
+    "https://bsc-dataseed3.binance.org/",
+    "https://bsc-dataseed4.binance.org/",
+    "https://bsc-dataseed.binance.org/",
+  ];
+  const headResults = await Promise.allSettled(
+    headEndpoints.map((rpc) =>
+      createPublicClient({ transport: http(rpc, { retryCount: 0, timeout: 8_000 }) }).getBlockNumber()
+    )
+  );
+  const head = headResults.reduce((best, r) =>
+    r.status === "fulfilled" && r.value > best ? r.value : best, 0n
+  );
+  if (head === 0n) return { ok: false, skipped: "could not determine chain head from any endpoint" };
 
   const address = getAddress(staking);
 
