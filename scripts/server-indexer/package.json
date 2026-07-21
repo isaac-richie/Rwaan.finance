@@ -1,0 +1,15 @@
+{
+  "name": "rwaan-indexer-daemon",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone RWAAN leaderboard/network indexer daemon for the VPS.",
+  "main": "indexer-daemon.mjs",
+  "scripts": {
+    "start": "node indexer-daemon.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.45.4",
+    "viem": "2.45.3"
+  }
+}

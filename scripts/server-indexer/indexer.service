@@ -1,0 +1,18 @@
+[Unit]
+Description=RWAAN Leaderboard Indexer (direct, pro RPC)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/rwaan-indexer
+EnvironmentFile=/etc/indexer.env
+ExecStart=/usr/bin/node /root/rwaan-indexer/indexer-daemon.mjs
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=indexer
+
+[Install]
+WantedBy=multi-user.target
