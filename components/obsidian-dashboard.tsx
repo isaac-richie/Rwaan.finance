@@ -10,7 +10,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
-import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useReadContracts, useSwitchChain, useWriteContract } from "wagmi";
+import { bsc } from "wagmi/chains";
 import { formatUnits, parseUnits, zeroAddress } from "viem";
 import { motion, useScroll, useSpring } from "framer-motion";
 import {
@@ -189,8 +190,14 @@ function KineticLine({ words, serifLast = false, delay = 0 }: { words: string[];
 /* ------------------------------------------------------------------ */
 export function ObsidianDashboard() {
   const { login: open } = usePrivy();
-  const { address } = useAccount();
+  // chainId here is the WALLET's actual chain (not the wagmi config's active
+  // chain), so it correctly reflects a wallet sitting on Ethereum/elsewhere.
+  const { address, chainId } = useAccount();
+  const { switchChainAsync, isPending: isSwitching } = useSwitchChain();
   const { writeContractAsync, isPending: isWriting } = useWriteContract();
+  // Treat "unknown chain" (undefined) as on-network so we don't nag before the
+  // wallet reports; the chainId-pinned writes still enforce BSC at submit time.
+  const onBsc = chainId === undefined || chainId === bsc.id;
   const [selectedPlan, setSelectedPlan] = useState("720");
   const [amount, setAmount] = useState("");
 
@@ -258,6 +265,17 @@ export function ObsidianDashboard() {
 
   const handleStake = async () => {
     if (!canSubmit || !tokenRead.data || !address) return;
+    // Many users connect while their wallet is on Ethereum (or wherever they
+    // last were). Switch them to BNB Chain first — one clear prompt — rather
+    // than letting the approve/stake calls fail on the wrong network. Passing
+    // chainId on each write below is the belt-and-suspenders enforcement.
+    if (!onBsc) {
+      try {
+        await switchChainAsync({ chainId: bsc.id });
+      } catch {
+        return; // user rejected the switch — nothing to stake against
+      }
+    }
     // The contract only allows setting a referrer once per wallet — if one is
     // already on-chain, a non-zero referrer here would revert the whole stake.
     const hasReferrer = Boolean(referrerOfRead.data && referrerOfRead.data !== zeroAddress);
@@ -265,8 +283,8 @@ export function ObsidianDashboard() {
     const referrer = hasReferrer || !stored || stored.toLowerCase() === address.toLowerCase()
       ? zeroAddress
       : stored;
-    await writeContractAsync({ address: tokenRead.data, abi: ERC20_WRITE_ABI, functionName: "approve", args: [contractAddress, stakeAmount] });
-    await writeContractAsync({ address: contractAddress, abi: RWAN_V5_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), referrer] });
+    await writeContractAsync({ chainId: bsc.id, address: tokenRead.data, abi: ERC20_WRITE_ABI, functionName: "approve", args: [contractAddress, stakeAmount] });
+    await writeContractAsync({ chainId: bsc.id, address: contractAddress, abi: RWAN_V5_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), referrer] });
     window.dispatchEvent(new Event("rwan:staked"));
   };
 
@@ -429,9 +447,29 @@ export function ObsidianDashboard() {
 
               <Magnetic strength={0.15} className="ob-cta-wrap">
                 <button type="button" className="ob-btn-gold ob-btn-full"
-                  onClick={address ? handleStake : () => open()}
-                  disabled={address ? !canSubmit : false}>
-                  {!contractConfigured ? "Contract pending" : address ? (isWriting ? "Confirm in wallet…" : "Approve & stake") : "Connect wallet"}
+                  onClick={
+                    !address
+                      ? () => open()
+                      : !onBsc
+                        ? () => { switchChainAsync({ chainId: bsc.id }).catch(() => {}); }
+                        : handleStake
+                  }
+                  disabled={
+                    !contractConfigured
+                      ? true
+                      : !address
+                        ? false
+                        : !onBsc
+                          ? isSwitching
+                          : !canSubmit
+                  }>
+                  {!contractConfigured
+                    ? "Contract pending"
+                    : !address
+                      ? "Connect wallet"
+                      : !onBsc
+                        ? (isSwitching ? "Switching…" : "Switch to BNB Chain")
+                        : (isWriting ? "Confirm in wallet…" : "Approve & stake")}
                   <ArrowUpRight className="h-4 w-4" />
                 </button>
               </Magnetic>
