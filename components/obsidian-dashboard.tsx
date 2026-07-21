@@ -190,14 +190,17 @@ function KineticLine({ words, serifLast = false, delay = 0 }: { words: string[];
 /* ------------------------------------------------------------------ */
 export function ObsidianDashboard() {
   const { login: open } = usePrivy();
-  // chainId here is the WALLET's actual chain (not the wagmi config's active
-  // chain), so it correctly reflects a wallet sitting on Ethereum/elsewhere.
-  const { address, chainId } = useAccount();
+  // chainId here is the WALLET's actual chain. On mobile WalletConnect it is
+  // often undefined even while the wallet sits on Ethereum, so it's only a
+  // hint for the button label — the real guard is ensureBsc() below, which
+  // talks to the wallet's raw provider before any broadcast.
+  const { address, chainId, connector } = useAccount();
   const { switchChainAsync, isPending: isSwitching } = useSwitchChain();
   const { writeContractAsync, isPending: isWriting } = useWriteContract();
-  // Treat "unknown chain" (undefined) as on-network so we don't nag before the
-  // wallet reports; the chainId-pinned writes still enforce BSC at submit time.
-  const onBsc = chainId === undefined || chainId === bsc.id;
+  const [switching, setSwitching] = useState(false);
+  const [chainError, setChainError] = useState<string | null>(null);
+  // Only claim "wrong chain" when the wallet reports a concrete non-BSC id.
+  const wrongChain = chainId !== undefined && chainId !== bsc.id;
   const [selectedPlan, setSelectedPlan] = useState("720");
   const [amount, setAmount] = useState("");
 
@@ -263,18 +266,68 @@ export function ObsidianDashboard() {
   const tvl = totalStakedRead.data ? Number(totalStakedRead.data) / 1e18 : null;
   const reserve = rewardReserveRead.data ? Number(rewardReserveRead.data) / 1e18 : null;
 
+  const BSC_HEX = "0x38"; // 56
+
+  // Guarantee the wallet is on BNB Chain *before* broadcasting. wagmi's
+  // switchChain can no-op here because the config only lists BSC, so it thinks
+  // it's already there while a mobile wallet is really on Ethereum. We go
+  // straight to the wallet's EIP-1193 provider, request the switch (adding the
+  // chain if the wallet doesn't know it), then verify eth_chainId actually
+  // reads 0x38. Returns true only when the wallet is provably on BSC.
+  const ensureBsc = async (): Promise<boolean> => {
+    try {
+      const provider = (await connector?.getProvider()) as
+        | { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> }
+        | undefined;
+      if (!provider) {
+        // No raw provider — fall back to wagmi and trust its result.
+        await switchChainAsync({ chainId: bsc.id });
+        return true;
+      }
+      const now = (await provider.request({ method: "eth_chainId" })) as string;
+      if (parseInt(now, 16) === bsc.id) return true;
+      try {
+        await provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: BSC_HEX }],
+        });
+      } catch (err) {
+        const e = err as { code?: number; message?: string };
+        // 4902 / "Unrecognized chain" — wallet doesn't have BSC yet; add it.
+        if (e?.code === 4902 || /unrecogni|not.*added|add.*chain/i.test(e?.message ?? "")) {
+          await provider.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: BSC_HEX,
+              chainName: "BNB Smart Chain",
+              nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+              rpcUrls: ["https://bsc-dataseed.binance.org/"],
+              blockExplorerUrls: ["https://bscscan.com"],
+            }],
+          });
+        } else {
+          throw err;
+        }
+      }
+      const after = (await provider.request({ method: "eth_chainId" })) as string;
+      return parseInt(after, 16) === bsc.id;
+    } catch {
+      return false;
+    }
+  };
+
   const handleStake = async () => {
     if (!canSubmit || !tokenRead.data || !address) return;
-    // Many users connect while their wallet is on Ethereum (or wherever they
-    // last were). Switch them to BNB Chain first — one clear prompt — rather
-    // than letting the approve/stake calls fail on the wrong network. Passing
-    // chainId on each write below is the belt-and-suspenders enforcement.
-    if (!onBsc) {
-      try {
-        await switchChainAsync({ chainId: bsc.id });
-      } catch {
-        return; // user rejected the switch — nothing to stake against
-      }
+    setChainError(null);
+    // Hard chain guard: never broadcast until the wallet is provably on BSC.
+    // Many users connect while on Ethereum and mobile wallets misreport their
+    // chain, so we verify via the raw provider rather than trusting wagmi.
+    setSwitching(true);
+    const ok = await ensureBsc();
+    setSwitching(false);
+    if (!ok) {
+      setChainError("Please switch your wallet to BNB Smart Chain, then try again.");
+      return;
     }
     // The contract only allows setting a referrer once per wallet — if one is
     // already on-chain, a non-zero referrer here would revert the whole stake.
@@ -283,9 +336,18 @@ export function ObsidianDashboard() {
     const referrer = hasReferrer || !stored || stored.toLowerCase() === address.toLowerCase()
       ? zeroAddress
       : stored;
+    // chainId pinned so wagmi also rejects a wrong-chain broadcast as a last line.
     await writeContractAsync({ chainId: bsc.id, address: tokenRead.data, abi: ERC20_WRITE_ABI, functionName: "approve", args: [contractAddress, stakeAmount] });
     await writeContractAsync({ chainId: bsc.id, address: contractAddress, abi: RWAN_V5_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), referrer] });
     window.dispatchEvent(new Event("rwan:staked"));
+  };
+
+  const handleSwitch = async () => {
+    setChainError(null);
+    setSwitching(true);
+    const ok = await ensureBsc();
+    setSwitching(false);
+    if (!ok) setChainError("Couldn't switch automatically — set your wallet to BNB Smart Chain manually.");
   };
 
   const featured = displayPlans[displayPlans.length - 1];
@@ -450,8 +512,8 @@ export function ObsidianDashboard() {
                   onClick={
                     !address
                       ? () => open()
-                      : !onBsc
-                        ? () => { switchChainAsync({ chainId: bsc.id }).catch(() => {}); }
+                      : wrongChain
+                        ? handleSwitch
                         : handleStake
                   }
                   disabled={
@@ -459,20 +521,25 @@ export function ObsidianDashboard() {
                       ? true
                       : !address
                         ? false
-                        : !onBsc
-                          ? isSwitching
+                        : wrongChain || switching || isSwitching
+                          ? switching || isSwitching
                           : !canSubmit
                   }>
                   {!contractConfigured
                     ? "Contract pending"
                     : !address
                       ? "Connect wallet"
-                      : !onBsc
-                        ? (isSwitching ? "Switching…" : "Switch to BNB Chain")
-                        : (isWriting ? "Confirm in wallet…" : "Approve & stake")}
+                      : switching || isSwitching
+                        ? "Switching to BNB Chain…"
+                        : wrongChain
+                          ? "Switch to BNB Chain"
+                          : (isWriting ? "Confirm in wallet…" : "Approve & stake")}
                   <ArrowUpRight className="h-4 w-4" />
                 </button>
               </Magnetic>
+              {chainError && (
+                <p className="ob-chain-error" role="alert">{chainError}</p>
+              )}
             </Reveal>
 
             <div className="ob-builder-side">

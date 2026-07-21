@@ -2500,6 +2500,13 @@ img.v2-brand-mark {
 .ob-btn-gold:hover::after { transform: translateX(130%); }
 .ob-btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
 .ob-btn-full { width: 100%; }
+.ob-chain-error {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #fca5a5;
+  text-align: center;
+}
 .ob-btn-lg { min-height: 56px; padding: 0 30px; font-size: 13.5px; }
 .ob-btn-ghost {
   display: inline-flex; align-items: center; gap: 9px;
