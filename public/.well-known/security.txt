@@ -1,0 +1,11 @@
+# Rawli Finance — security contact (RFC 9116)
+# A published security policy is a legitimacy signal for wallet security
+# vendors and a real channel for responsible disclosure.
+
+Contact: mailto:security@rawli.finance
+Expires: 2027-07-22T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://www.rawli.finance/.well-known/security.txt
+
+# Project: Rawli Finance — non-custodial $RWAAN staking on BNB Smart Chain
+# Staking contract: 0x85DFdDbf41e8220A89B014f4E89a908bCDEd182b (verified on BscScan)

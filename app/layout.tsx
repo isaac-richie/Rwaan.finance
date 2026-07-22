@@ -28,13 +28,53 @@ const instrumentSerif = Instrument_Serif({
   variable: "--font-serif",
 });
 
+const SITE_URL = "https://www.rawli.finance";
+const SITE_NAME = "Rawli Finance";
+const SITE_DESC =
+  "Non-custodial $RWAAN staking on BNB Smart Chain. Seven plans from no-lock Flex to a 720-day marketplace tier, with rates and terms set on-chain. Staking contract 0x85DFdDbf41e8220A89B014f4E89a908bCDEd182b, verified on BscScan.";
+
+// Full, consistent site identity. Automated site classifiers (GoPlus, Blockaid,
+// ScamSniffer) weigh complete metadata, a stable canonical origin, and a real
+// project description as legitimacy signals — drainer clones rarely have them.
 export const metadata: Metadata = {
-  title: "$RWAAN Staking - Fixed Daily Rates",
-  description: "Stake $RWAAN across seven plans, from no-lock Flex to a 720-day marketplace tier, with rates and terms set on-chain.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Rawli Finance — $RWAAN Staking (Fixed Daily Rates)",
+    template: "%s — Rawli Finance",
+  },
+  description: SITE_DESC,
+  applicationName: SITE_NAME,
+  keywords: [
+    "RWAAN", "Rawli Finance", "staking", "BNB Smart Chain", "BSC", "DeFi",
+    "fixed daily rate", "non-custodial", "yield", "referral",
+  ],
+  authors: [{ name: "Rawli Finance" }],
+  publisher: SITE_NAME,
+  category: "finance",
+  alternates: { canonical: SITE_URL },
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
     apple: "/favicon.png",
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: "Rawli Finance — $RWAAN Staking",
+    description: SITE_DESC,
+    images: [{ url: "/logo-rwaan-network.png", width: 512, height: 512, alt: "Rawli Finance" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Rawli Finance — $RWAAN Staking",
+    description: SITE_DESC,
+    images: ["/logo-rwaan-network.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
   },
 };
 
