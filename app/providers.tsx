@@ -93,17 +93,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
           accentColor: "#FACC15",
           logo: "/favicon.png",
           showWalletLoginFirst: true,
-          // Community-preferred wallets, in priority order. 'detected_wallets'
-          // surfaces any installed browser extension (Rabby, Trust, imToken,
-          // OKX, …) so they appear without an explicit entry; 'metamask' and
-          // 'bitget_wallet' are pinned to the top; 'wallet_connect' covers the
-          // mobile apps (Trust, imToken, Bitget, MetaMask mobile) via QR.
-          // NOTE: 'rabby_wallet' is deprecated in Privy — Rabby comes through
-          // 'detected_wallets' instead, so it is intentionally not listed.
+          // Community-preferred wallets, in priority order. 'metamask',
+          // 'bitget_wallet' and 'rabby_wallet' are pinned to the top so they
+          // always get their own row; 'detected_wallets' surfaces any other
+          // installed extension (Trust, imToken, OKX, 1inch, …); 'wallet_connect'
+          // covers the mobile apps via QR. rabby_wallet is listed explicitly
+          // (in addition to detection) so Rabby is never buried under the
+          // "Other wallets" fold.
           walletList: [
-            "detected_wallets",
             "metamask",
             "bitget_wallet",
+            "rabby_wallet",
+            "detected_wallets",
             "wallet_connect",
           ],
         },
