@@ -16,6 +16,15 @@ const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
 
 const wagmiConfig = createConfig({
   chains: [bsc],
+  // EIP-6963 discovery. Privy's login modal surfaces browser-extension wallets
+  // (Rabby, Trust, OKX, …) under `detected_wallets` by listening for their
+  // EIP-6963 announcements — with discovery off, Rabby never appears because it
+  // only announces via EIP-6963 (no dedicated Privy button; that entry is
+  // deprecated). Enabling it here does NOT reintroduce the old wallet-drop
+  // desync: that came from wagmi's own createConfig adding competing injected
+  // connectors. We use @privy-io/wagmi's createConfig, so Privy stays the sole
+  // connection manager and just gains visibility of the announced wallets.
+  multiInjectedProviderDiscovery: true,
   transports: {
     [bsc.id]: fallback([
       http("/api/rpc", {
