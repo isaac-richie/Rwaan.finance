@@ -20,8 +20,10 @@ import { normalizeCode, validateReferrer } from "@/lib/server/referrer";
 
 export const dynamic = "force-dynamic";
 
-/** Canonical message the frontend must sign. Keep in sync with the client. */
-export function claimMessage(code: string, walletChecksum: string): string {
+/** Canonical message the frontend must sign. Keep in sync with the client
+ *  (network-dashboard.tsx builds the identical string). Not exported —
+ *  Next.js route files may only export route handlers and config. */
+function claimMessage(code: string, walletChecksum: string): string {
   return `Claim RWAAN referral code "${code}" for ${walletChecksum}`;
 }
 
