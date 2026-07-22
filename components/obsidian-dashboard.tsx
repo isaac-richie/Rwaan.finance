@@ -12,7 +12,7 @@ import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useReadContract, useReadContracts, useSwitchChain, useWriteContract } from "wagmi";
 import { bsc } from "wagmi/chains";
-import { formatUnits, parseUnits, zeroAddress } from "viem";
+import { formatUnits, parseUnits, zeroAddress, type Address } from "viem";
 import { motion, useScroll, useSpring } from "framer-motion";
 import {
   ArrowUpRight,
@@ -33,7 +33,7 @@ import { CountUp, Grain, Magnetic, Marquee, Reveal, Spotlight, Tilt } from "@/co
 import { AurumFooter } from "@/components/aurum-footer";
 import { ObNav } from "@/components/ob-nav";
 import { MyPositions } from "@/components/staking/my-positions";
-import { captureReferrerFromUrl, getStoredReferrer } from "@/lib/utils/referral";
+import { captureReferrerFromUrl, getStoredReferrer, resolveReferrer, storeReferrer } from "@/lib/utils/referral";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -204,7 +204,43 @@ export function ObsidianDashboard() {
   const [selectedPlan, setSelectedPlan] = useState("720");
   const [amount, setAmount] = useState("");
 
-  useEffect(() => { captureReferrerFromUrl(); }, []);
+  // "Referred by" — a code or address the user can type if the link's stored
+  // referrer didn't survive (e.g. they opened the link in one browser and stake
+  // in the wallet's in-app browser). Auto-filled from the stored referrer.
+  const [referrerInput, setReferrerInput] = useState("");
+  const [resolvedReferrer, setResolvedReferrer] = useState<Address | null>(null);
+  const [referrerState, setReferrerState] = useState<"idle" | "checking" | "ok" | "bad">("idle");
+
+  useEffect(() => {
+    captureReferrerFromUrl().then(() => {
+      const stored = getStoredReferrer();
+      if (stored) {
+        setReferrerInput(stored);
+        setResolvedReferrer(stored);
+        setReferrerState("ok");
+      }
+    });
+  }, []);
+
+  // Resolve the typed code/address (debounced). A raw valid address resolves
+  // instantly client-side for snappy feedback; codes go to the backend.
+  useEffect(() => {
+    const raw = referrerInput.trim();
+    if (!raw) { setResolvedReferrer(null); setReferrerState("idle"); return; }
+    setReferrerState("checking");
+    const t = setTimeout(async () => {
+      const addr = await resolveReferrer(raw);
+      if (addr) {
+        setResolvedReferrer(addr);
+        setReferrerState("ok");
+        storeReferrer(addr);
+      } else {
+        setResolvedReferrer(null);
+        setReferrerState("bad");
+      }
+    }, 450);
+    return () => clearTimeout(t);
+  }, [referrerInput]);
 
   const contractAddress = RWAN_V5_STAKING_ADDRESS ?? zeroAddress;
   const contractConfigured = Boolean(RWAN_V5_STAKING_ADDRESS && RWAN_V5_STAKING_ADDRESS !== zeroAddress);
@@ -332,10 +368,11 @@ export function ObsidianDashboard() {
     // The contract only allows setting a referrer once per wallet — if one is
     // already on-chain, a non-zero referrer here would revert the whole stake.
     const hasReferrer = Boolean(referrerOfRead.data && referrerOfRead.data !== zeroAddress);
-    const stored = getStoredReferrer();
-    const referrer = hasReferrer || !stored || stored.toLowerCase() === address.toLowerCase()
+    // Prefer the resolved "Referred by" field; fall back to the stored referrer.
+    const candidate = resolvedReferrer ?? getStoredReferrer();
+    const referrer = hasReferrer || !candidate || candidate.toLowerCase() === address.toLowerCase()
       ? zeroAddress
-      : stored;
+      : candidate;
     // chainId pinned so wagmi also rejects a wrong-chain broadcast as a last line.
     await writeContractAsync({ chainId: bsc.id, address: tokenRead.data, abi: ERC20_WRITE_ABI, functionName: "approve", args: [contractAddress, stakeAmount] });
     await writeContractAsync({ chainId: bsc.id, address: contractAddress, abi: RWAN_V5_ABI, functionName: "stake", args: [stakeAmount, BigInt(Number(plan.id)), referrer] });
@@ -498,6 +535,34 @@ export function ObsidianDashboard() {
                 </div>
                 <span>{address ? "Wallet connected" : "Wallet not connected"}</span>
               </div>
+
+              {address && (
+                referrerOfRead.data && referrerOfRead.data !== zeroAddress ? (
+                  <p className="ob-referred-note">
+                    Referred by <code>{`${(referrerOfRead.data as string).slice(0, 6)}…${(referrerOfRead.data as string).slice(-4)}`}</code> · locked on-chain
+                  </p>
+                ) : (
+                  <div className="ob-referred-field">
+                    <label htmlFor="ob-referrer">Referred by <span>(code or wallet — optional)</span></label>
+                    <div className={`ob-referred-input ob-ref-${referrerState}`}>
+                      <input
+                        id="ob-referrer"
+                        value={referrerInput}
+                        placeholder="e.g. RICH or 0x…"
+                        autoComplete="off"
+                        spellCheck={false}
+                        onChange={(e) => setReferrerInput(e.target.value)}
+                      />
+                      {referrerState === "checking" && <span className="ob-ref-hint">checking…</span>}
+                      {referrerState === "ok" && <Check className="h-4 w-4" aria-label="valid referrer" />}
+                      {referrerState === "bad" && <span className="ob-ref-hint">not found</span>}
+                    </div>
+                    {referrerState === "ok" && resolvedReferrer && (
+                      <p className="ob-ref-resolved">→ {`${resolvedReferrer.slice(0, 6)}…${resolvedReferrer.slice(-4)}`}</p>
+                    )}
+                  </div>
+                )
+              )}
 
               <div className="ob-est">
                 <div><span>Daily reward</span><strong>{fmt(daily)} RWAAN</strong></div>

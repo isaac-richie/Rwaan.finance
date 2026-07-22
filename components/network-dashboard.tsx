@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
-import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { formatUnits } from "viem";
+import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt, useSignMessage } from "wagmi";
+import { formatUnits, getAddress } from "viem";
 import {
   ArrowLeft,
   Check,
@@ -68,12 +68,67 @@ interface NetworkData {
 export function NetworkDashboard() {
   const { login: open } = usePrivy();
   const { address, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
   const [network, setNetwork] = useState<NetworkData | null>(null);
   const [networkLoading, setNetworkLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Referral code — one per wallet. Claimed once via a signed message.
+  const [code, setCode] = useState<string | null>(null);
+  const [codeInput, setCodeInput] = useState("");
+  const [claiming, setClaiming] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+
   const staking = RWAN_V5_STAKING_ADDRESS;
-  const referralLink = address ? buildReferralLink(address) : "";
+  // Share by code once claimed (friendlier); fall back to the address link.
+  const referralLink = code
+    ? buildReferralLink(code)
+    : address
+      ? buildReferralLink(address)
+      : "";
+
+  // Load any code this wallet already owns.
+  useEffect(() => {
+    if (!address) { setCode(null); return; }
+    let cancelled = false;
+    fetch(`/api/referral/code?wallet=${address}`)
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled) setCode(d.code ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [address]);
+
+  const handleClaimCode = async () => {
+    if (!address || claiming) return;
+    const desired = codeInput.trim().toLowerCase();
+    if (!/^[a-z0-9]{3,16}$/.test(desired)) {
+      setCodeError("Code must be 3–16 letters or numbers.");
+      return;
+    }
+    setCodeError(null);
+    setClaiming(true);
+    try {
+      const walletChecksum = getAddress(address);
+      const message = `Claim RWAAN referral code "${desired}" for ${walletChecksum}`;
+      const signature = await signMessageAsync({ message });
+      const res = await fetch("/api/referral/code", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ wallet: address, code: desired, signature }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setCode(data.code);
+        setCodeInput("");
+      } else {
+        setCodeError(data.reason ?? "Could not claim that code.");
+      }
+    } catch {
+      setCodeError("Signature was rejected or failed.");
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   // ── clipboard copy with textarea fallback ──────────────────────────────────
   const handleCopyLink = () => {
@@ -309,17 +364,52 @@ export function NetworkDashboard() {
             <section className="ob-section">
               <div className="ob-ghost-num" aria-hidden="true">01</div>
               <div className="ob-section-head">
-                <Reveal><h2 className="ob-h2">Your referral <em>link.</em></h2></Reveal>
+                <Reveal><h2 className="ob-h2">Your referral <em>code.</em></h2></Reveal>
                 <Reveal delay={0.06}>
                   <p>
-                    Anyone who stakes through this link becomes your direct referral — you earn
-                    2% of every reward they claim, paid instantly to your wallet in RWAAN.
+                    Claim a short code, then share the code or the link. Anyone who stakes with it
+                    becomes your direct referral — you earn 2% of every reward they claim, paid
+                    instantly to your wallet in RWAAN. They can also type your code in the
+                    “Referred by” box when they stake.
                   </p>
                 </Reveal>
               </div>
 
               {personalStake != null && personalStake > 0n ? (
                 <Reveal className="ob-referral-card">
+                  {/* Referral code — claim once, then share it instead of the address */}
+                  {code ? (
+                    <div className="ob-code-owned">
+                      <span className="ob-code-label">Your code</span>
+                      <code className="ob-code-value">{code.toUpperCase()}</code>
+                    </div>
+                  ) : (
+                    <div className="ob-code-claim">
+                      <span className="ob-code-label">Claim your referral code</span>
+                      <div className="ob-code-row">
+                        <input
+                          value={codeInput}
+                          onChange={(e) => setCodeInput(e.target.value.replace(/[^A-Za-z0-9]/g, ""))}
+                          placeholder="e.g. RICH"
+                          maxLength={16}
+                          autoComplete="off"
+                          spellCheck={false}
+                          className="ob-referral-input"
+                          aria-label="Desired referral code"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleClaimCode}
+                          disabled={claiming || codeInput.trim().length < 3}
+                          className="ob-btn-gold ob-copy-btn"
+                        >
+                          {claiming ? "Sign…" : "Claim"}
+                        </button>
+                      </div>
+                      {codeError && <p className="ob-code-error" role="alert">{codeError}</p>}
+                    </div>
+                  )}
+
                   <div className="ob-referral-row">
                     <Link2 className="ob-referral-icon" />
                     <input
