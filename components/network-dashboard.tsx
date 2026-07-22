@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt, useSignMessage } from "wagmi";
@@ -12,6 +12,7 @@ import {
   Link2,
   LockKeyhole,
   Network,
+  RefreshCw,
   ShieldCheck,
   Star,
   Users,
@@ -256,14 +257,39 @@ export function NetworkDashboard() {
 
   // ── Supabase network fetch ─────────────────────────────────────────────────
   const addr = address?.toLowerCase();
-  useEffect(() => {
+  const fetchNetwork = useCallback(async () => {
     if (!addr) return;
     setNetworkLoading(true);
-    fetch(`/api/network?wallet=${addr}`)
-      .then((r) => r.json())
-      .then((d) => { if (!d.error) setNetwork(d); })
-      .finally(() => setNetworkLoading(false));
+    try {
+      const r = await fetch(`/api/network?wallet=${addr}`, { cache: "no-store" });
+      const d = await r.json();
+      if (!d.error) setNetwork(d);
+    } catch {
+      // leave the last-good data in place on a transient error
+    } finally {
+      setNetworkLoading(false);
+    }
   }, [addr]);
+
+  useEffect(() => { fetchNetwork(); }, [fetchNetwork]);
+
+  // Manual refresh — re-pull the indexed network data AND the live chain reads,
+  // so a user can check for new referrals without reloading the whole page.
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchNetwork(),
+        chainReads.refetch(),
+        milestoneReads.refetch(),
+      ]);
+    } finally {
+      // brief spin so the feedback is legible even when the refetch is instant
+      setTimeout(() => setRefreshing(false), 500);
+    }
+  };
 
   const uplineDisplay =
     uplineChain && uplineChain !== "0x0000000000000000000000000000000000000000"
@@ -292,7 +318,22 @@ export function NetworkDashboard() {
               </Link>
             </Reveal>
             <Reveal delay={0.04}>
-              <h1 className="ob-h2">Your <em>network.</em></h1>
+              <div className="ob-net-title-row">
+                <h1 className="ob-h2">Your <em>network.</em></h1>
+                {isConnected && (
+                  <button
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="ob-refresh-btn"
+                    aria-label="Refresh network data"
+                    title="Refresh referrals & stats"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${refreshing ? "ob-spin" : ""}`} />
+                    <span>{refreshing ? "Refreshing…" : "Refresh"}</span>
+                  </button>
+                )}
+              </div>
             </Reveal>
             <Reveal delay={0.08}>
               <p>Downline depth, team stake, and milestone progress.</p>

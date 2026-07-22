@@ -3514,6 +3514,34 @@ html, body {
 .ob-referred-note { font-size: 12px; color: var(--ob-dim); margin: 2px 0; }
 .ob-referred-note code { color: var(--ob-gold-hi); font-family: var(--font-space), monospace; }
 
+/* ── Network refresh button ──────────────────────────────────────────────── */
+.ob-net-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.ob-refresh-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid rgba(240, 185, 11, 0.28);
+  border-radius: 999px;
+  background: rgba(240, 185, 11, 0.06);
+  color: var(--ob-gold-hi);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.ob-refresh-btn:hover:not(:disabled) {
+  border-color: rgba(240, 185, 11, 0.5);
+  background: rgba(240, 185, 11, 0.12);
+  transform: translateY(-1px);
+}
+.ob-refresh-btn:active:not(:disabled) { transform: translateY(0); }
+.ob-refresh-btn:disabled { opacity: 0.7; cursor: default; }
+.ob-spin { animation: ob-spin 0.7s linear infinite; }
+@keyframes ob-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ob-spin { animation-duration: 1.4s; } }
+
 .ob-referral-locked {
   display: flex;
   flex-direction: column;
