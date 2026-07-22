@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ShieldCheck } from "lucide-react";
+import { RWAN_V5_STAKING_ADDRESS } from "@/lib/contracts/rwanV5Abi";
+
+// Public, stable address — fall back to the literal so the verified-contract
+// link always resolves even if the env var isn't present at build time.
+const STAKING_ADDRESS =
+  RWAN_V5_STAKING_ADDRESS ?? "0x85DFdDbf41e8220A89B014f4E89a908bCDEd182b";
+const BSCSCAN_CONTRACT = `https://bscscan.com/address/${STAKING_ADDRESS}#code`;
 import {
   Dialog,
   DialogClose,
@@ -98,6 +105,17 @@ export function AurumFooter() {
             </div>
           </div>
           <p>Transparent, reserve-backed staking infrastructure.</p>
+          <a
+            href={BSCSCAN_CONTRACT}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="au-verified-badge"
+            title={`Staking contract ${STAKING_ADDRESS} — verified on BscScan`}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Verified contract on BscScan
+            <ArrowUpRight className="h-3 w-3" />
+          </a>
           <div className="au-socials">
             <a
               href="https://twitter.com"
@@ -125,6 +143,21 @@ export function AurumFooter() {
           <TermsModal />
           <Link href="/privacy-policy" className="au-foot-link">Privacy Policy</Link>
           <Link href="/risk-disclosure" className="au-foot-link">Risk Disclosure</Link>
+        </nav>
+
+        <nav className="au-footer-links" aria-label="On-chain">
+          <span className="au-foot-eyebrow">On-chain</span>
+          <a href={BSCSCAN_CONTRACT} target="_blank" rel="noopener noreferrer" className="au-foot-link">
+            Staking contract <ArrowUpRight className="h-3.5 w-3.5" />
+          </a>
+          <a
+            href={`https://bscscan.com/address/${STAKING_ADDRESS}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="au-foot-link"
+          >
+            Contract activity <ArrowUpRight className="h-3.5 w-3.5" />
+          </a>
         </nav>
       </div>
 

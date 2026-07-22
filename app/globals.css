@@ -1994,6 +1994,22 @@ body {
   line-height: 1.6;
   color: rgba(244, 246, 251, 0.45);
 }
+.au-verified-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 14px;
+  padding: 6px 12px;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 999px;
+  background: rgba(74, 222, 128, 0.07);
+  color: #6ee7a5;
+  font-size: 12px; font-weight: 500;
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.au-verified-badge:hover {
+  border-color: rgba(74, 222, 128, 0.55);
+  background: rgba(74, 222, 128, 0.12);
+}
 .au-socials { display: flex; gap: 10px; margin-top: 18px; }
 .au-social {
   display: inline-flex;
